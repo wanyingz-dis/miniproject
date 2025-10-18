@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.api_title,
     version=settings.api_version,
-    description="Lightweight LLM Observability Platform - Track experiments, visualize metrics, analyze performance",
+    description="Mini Project: LLM Observability Platform",
     lifespan=lifespan,
     docs_url=f"{settings.api_prefix}/docs",
     redoc_url=f"{settings.api_prefix}/redoc",
