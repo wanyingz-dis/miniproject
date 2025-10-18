@@ -79,13 +79,19 @@ class DataManager:
             exp = pd.read_csv(settings.experiments_path)
             # Created-at in experiments often ISO-like; be tolerant.
             exp["created_at"] = _parse_dt(exp["created_at"])
-            # Some datasets ship 'is_del'; Pydantic uses 'is_deleted'.
-            if "is_del" in exp.columns and "is_deleted" not in exp.columns:
-                exp = exp.rename(columns={"is_del": "is_deleted"})
-            # Default missing flags to False
+
+            # add rename_map for exp naming consistency
+            rename_map = {
+                "experiment name": "name",
+                "Experiment Name": "name",
+                "is_del": "is_deleted",
+            }
+            exp = exp.rename(
+                columns={k: v for k, v in rename_map.items() if k in exp.columns})
             if "is_deleted" in exp.columns:
                 exp["is_deleted"] = exp["is_deleted"].fillna(
                     False).astype(bool)
+
             exp = _normalize_df(exp)
 
             # -- Trials --------------------------------------------------------
