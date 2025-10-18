@@ -2,13 +2,14 @@
 Pydantic models for type safety and validation
 """
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List, Dict, Any, Literal
+from typing import Optional, List, Any, Literal
 from datetime import datetime
 from enum import Enum
 
 
 class TrialStatus(str, Enum):
     """Trial status enumeration"""
+
     PENDING = "pending"
     RUNNING = "running"
     FINISHED = "finished"
@@ -17,8 +18,10 @@ class TrialStatus(str, Enum):
 
 # ============= Response Models =============
 
+
 class Experiment(BaseModel):
     """Experiment model"""
+
     id: int
     name: str
     project_id: str
@@ -36,6 +39,7 @@ class Experiment(BaseModel):
 
 class Trial(BaseModel):
     """Trial model"""
+
     id: int
     experiment_id: int
     status: TrialStatus
@@ -48,14 +52,12 @@ class Trial(BaseModel):
     total_cost: Optional[float] = 0
     avg_latency: Optional[float] = None
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        populate_by_name=True
-    )
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class Run(BaseModel):
     """Run model"""
+
     id: int
     trial_id: int
     tokens: int
@@ -63,16 +65,15 @@ class Run(BaseModel):
     latency_ms: int = Field(alias="latency(ms)")
     created_at: datetime
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        populate_by_name=True
-    )
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 # ============= API Response Models =============
 
+
 class PaginatedResponse(BaseModel):
     """Paginated response wrapper"""
+
     items: List[Any]
     total: int
     page: int
@@ -82,6 +83,7 @@ class PaginatedResponse(BaseModel):
 
 class DashboardStats(BaseModel):
     """Dashboard statistics"""
+
     total_experiments: int
     total_trials: int
     total_runs: int
@@ -95,6 +97,7 @@ class DashboardStats(BaseModel):
 
 class CostByExperiment(BaseModel):
     """Cost breakdown by experiment"""
+
     experiment_id: int
     experiment_name: str
     total_cost: float
@@ -104,6 +107,7 @@ class CostByExperiment(BaseModel):
 
 class DailyCost(BaseModel):
     """Daily cost aggregation"""
+
     date: str
     total_cost: float
     run_count: int
@@ -112,6 +116,7 @@ class DailyCost(BaseModel):
 
 class AccuracyCurve(BaseModel):
     """Accuracy curve data point"""
+
     trial_id: int
     timestamp: datetime
     accuracy: float
@@ -120,8 +125,10 @@ class AccuracyCurve(BaseModel):
 
 # ============= Request Models =============
 
+
 class QueryParams(BaseModel):
     """Common query parameters"""
+
     page: int = Field(1, ge=1)
     page_size: int = Field(20, ge=1, le=100)
     sort_by: Optional[str] = None
@@ -134,6 +141,7 @@ class QueryParams(BaseModel):
 
 class ExperimentFilter(BaseModel):
     """Experiment filter parameters"""
+
     name: Optional[str] = None
     project_id: Optional[str] = None
     created_after: Optional[datetime] = None
@@ -142,6 +150,7 @@ class ExperimentFilter(BaseModel):
 
 class TrialFilter(BaseModel):
     """Trial filter parameters"""
+
     experiment_id: Optional[int] = None
     status: Optional[TrialStatus] = None
     min_accuracy: Optional[float] = Field(None, ge=0, le=1)
@@ -150,6 +159,7 @@ class TrialFilter(BaseModel):
 
 class RunFilter(BaseModel):
     """Run filter parameters"""
+
     trial_id: Optional[int] = None
     min_cost: Optional[float] = Field(None, ge=0)
     max_cost: Optional[float] = Field(None, ge=0)
@@ -159,8 +169,10 @@ class RunFilter(BaseModel):
 
 # ============= Chat Models (Bonus) =============
 
+
 class ChatRequest(BaseModel):
     """Chat request for analysis"""
+
     message: str
     experiment_id: Optional[int] = None
     include_context: bool = True
@@ -168,6 +180,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     """Chat response with context"""
+
     response: str
     context_used: List[str] = []
     relevant_experiments: List[int] = []

@@ -8,7 +8,6 @@ from contextlib import asynccontextmanager
 import logging
 import time
 import sys
-from typing import Any
 
 from app.config import settings
 from app.data_loader import data_manager
@@ -17,10 +16,8 @@ from app.routes import router
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
 
@@ -55,7 +52,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url=f"{settings.api_prefix}/docs",
     redoc_url=f"{settings.api_prefix}/redoc",
-    openapi_url=f"{settings.api_prefix}/openapi.json"
+    openapi_url=f"{settings.api_prefix}/openapi.json",
 )
 
 # Add CORS middleware
@@ -86,7 +83,8 @@ async def log_requests(request: Request, call_next):
 
     # Log response
     logger.info(
-        f"{request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s")
+        f"{request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s"
+    )
 
     return response
 
@@ -99,9 +97,9 @@ async def not_found_handler(request: Request, exc):
         status_code=404,
         content={
             "error": "Not Found",
-            "message": f"The requested resource was not found",
-            "path": str(request.url.path)
-        }
+            "message": "The requested resource was not found",
+            "path": str(request.url.path),
+        },
     )
 
 
@@ -113,8 +111,8 @@ async def internal_error_handler(request: Request, exc):
         status_code=500,
         content={
             "error": "Internal Server Error",
-            "message": "An unexpected error occurred"
-        }
+            "message": "An unexpected error occurred",
+        },
     )
 
 
@@ -135,8 +133,8 @@ async def root():
             "dashboard": f"{settings.api_prefix}/dashboard/stats",
             "experiments": f"{settings.api_prefix}/experiments",
             "search": f"{settings.api_prefix}/search",
-            "health": f"{settings.api_prefix}/health"
-        }
+            "health": f"{settings.api_prefix}/health",
+        },
     }
 
 
@@ -147,10 +145,12 @@ async def status():
     return {
         "status": "operational",
         "data_loaded": data_manager._initialized,
-        "experiments_count": len(data_manager.experiments_df) if data_manager._initialized else 0,
+        "experiments_count": len(data_manager.experiments_df)
+        if data_manager._initialized
+        else 0,
         "trials_count": len(data_manager.trials_df) if data_manager._initialized else 0,
         "runs_count": len(data_manager.runs_df) if data_manager._initialized else 0,
-        "version": settings.api_version
+        "version": settings.api_version,
     }
 
 
@@ -163,5 +163,5 @@ if __name__ == "__main__":
         host=settings.host,
         port=settings.port,
         reload=settings.reload,
-        log_level="info"
+        log_level="info",
     )

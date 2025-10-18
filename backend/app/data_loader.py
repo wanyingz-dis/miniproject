@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 # ---- small helpers (pure functions) ---------------------------------------
 
+
 def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
     """Make a DataFrame safe to join:
     - reset any index back to columns (so 'id' can't be both index & column)
@@ -38,15 +39,16 @@ def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def _parse_dt(series: pd.Series, *, fmt: str | None = None, dayfirst: bool | None = None) -> pd.Series:
+def _parse_dt(
+    series: pd.Series, *, fmt: str | None = None, dayfirst: bool | None = None
+) -> pd.Series:
     """Parse datetimes tolerant to format differences across files."""
     # If a strict format is provided, try that first; fall back to best-effort.
     if fmt:
         s = pd.to_datetime(series, format=fmt, errors="coerce")
         # If many NaT, try a best-effort parse as a fallback
         if s.isna().mean() > 0.5:
-            s = pd.to_datetime(series, errors="coerce",
-                               dayfirst=bool(dayfirst))
+            s = pd.to_datetime(series, errors="coerce", dayfirst=bool(dayfirst))
         return s
     return pd.to_datetime(series, errors="coerce", dayfirst=bool(dayfirst))
 
@@ -57,6 +59,7 @@ def _safe_lower(series: pd.Series) -> pd.Series:
 
 
 # ---- DataManager -----------------------------------------------------------
+
 
 class DataManager:
     """
@@ -87,10 +90,10 @@ class DataManager:
                 "is_del": "is_deleted",
             }
             exp = exp.rename(
-                columns={k: v for k, v in rename_map.items() if k in exp.columns})
+                columns={k: v for k, v in rename_map.items() if k in exp.columns}
+            )
             if "is_deleted" in exp.columns:
-                exp["is_deleted"] = exp["is_deleted"].fillna(
-                    False).astype(bool)
+                exp["is_deleted"] = exp["is_deleted"].fillna(False).astype(bool)
 
             exp = _normalize_df(exp)
 
@@ -131,8 +134,9 @@ class DataManager:
 
             logger.info(
                 "Data loaded: %d experiments, %d trials, %d runs",
-                len(self.experiments_df), len(
-                    self.trials_df), len(self.runs_df)
+                len(self.experiments_df),
+                len(self.trials_df),
+                len(self.runs_df),
             )
 
         except Exception as e:
@@ -145,14 +149,11 @@ class DataManager:
         """Compute lightweight aggregates so routes can be snappy."""
         if self.runs_df is not None and self.trials_df is not None:
             # Aggregate runs at the trial level
-            runs_agg = (
-                self.runs_df.groupby("trial_id", as_index=False)
-                .agg(
-                    total_cost=("costs", "sum"),
-                    total_tokens=("tokens", "sum"),
-                    avg_latency_ms=("latency_ms", "mean"),
-                    run_count=("id", "count"),
-                )
+            runs_agg = self.runs_df.groupby("trial_id", as_index=False).agg(
+                total_cost=("costs", "sum"),
+                total_tokens=("tokens", "sum"),
+                avg_latency_ms=("latency_ms", "mean"),
+                run_count=("id", "count"),
             )
             # Explicit keys: trials.id ↔ runs_agg.trial_id
             self.trials_df = self.trials_df.merge(
@@ -160,31 +161,39 @@ class DataManager:
             ).drop(columns=["trial_id"], errors="ignore")
 
             # Fill NA after the merge (trials with zero runs)
-            self.trials_df[["total_cost", "total_tokens", "avg_latency_ms", "run_count"]] = (
-                self.trials_df[["total_cost", "total_tokens", "avg_latency_ms", "run_count"]].fillna(
-                    {"total_cost": 0.0, "total_tokens": 0, "run_count": 0}
-                )
+            self.trials_df[
+                ["total_cost", "total_tokens", "avg_latency_ms", "run_count"]
+            ] = self.trials_df[
+                ["total_cost", "total_tokens", "avg_latency_ms", "run_count"]
+            ].fillna(
+                {"total_cost": 0.0, "total_tokens": 0, "run_count": 0}
             )
 
         if self.trials_df is not None and self.experiments_df is not None:
             # Aggregate trials at the experiment level
-            exp_agg_from_trials = (
-                self.trials_df.groupby("experiment_id", as_index=False)
-                .agg(
-                    avg_accuracy=("accuracy", "mean"),
-                    total_cost=("total_cost", "sum"),
-                    total_trials=("id", "count"),
-                    total_runs=("run_count", "sum"),
-                )
+            exp_agg_from_trials = self.trials_df.groupby(
+                "experiment_id", as_index=False
+            ).agg(
+                avg_accuracy=("accuracy", "mean"),
+                total_cost=("total_cost", "sum"),
+                total_trials=("id", "count"),
+                total_runs=("run_count", "sum"),
             )
             self.experiments_df = self.experiments_df.merge(
                 exp_agg_from_trials, left_on="id", right_on="experiment_id", how="left"
             ).drop(columns=["experiment_id"], errors="ignore")
 
-            self.experiments_df[["avg_accuracy", "total_cost", "total_trials", "total_runs"]] = (
-                self.experiments_df[["avg_accuracy",
-                                     "total_cost", "total_trials", "total_runs"]]
-                .fillna({"avg_accuracy": np.nan, "total_cost": 0.0, "total_trials": 0, "total_runs": 0})
+            self.experiments_df[
+                ["avg_accuracy", "total_cost", "total_trials", "total_runs"]
+            ] = self.experiments_df[
+                ["avg_accuracy", "total_cost", "total_trials", "total_runs"]
+            ].fillna(
+                {
+                    "avg_accuracy": np.nan,
+                    "total_cost": 0.0,
+                    "total_trials": 0,
+                    "total_runs": 0,
+                }
             )
 
     # ---- queries -----------------------------------------------------------
@@ -203,8 +212,7 @@ class DataManager:
         # Filters
         if filters:
             if filters.get("name"):
-                df = df[df["name"].str.contains(
-                    filters["name"], case=False, na=False)]
+                df = df[df["name"].str.contains(filters["name"], case=False, na=False)]
             if filters.get("project_id"):
                 df = df[df["project_id"] == filters["project_id"]]
             if filters.get("created_after") is not None:
@@ -218,7 +226,7 @@ class DataManager:
 
         # Page
         total = len(df)
-        df = df.iloc[offset: offset + limit]
+        df = df.iloc[offset : offset + limit]
         return df.to_dict("records"), total
 
     def get_experiment_by_id(self, experiment_id: int) -> Optional[Dict]:
@@ -241,8 +249,9 @@ class DataManager:
 
     def get_runs_by_trial(self, trial_id: int) -> List[Dict]:
         """All runs for a trial, oldest → newest."""
-        df = self.runs_df[self.runs_df["trial_id"]
-                          == trial_id].sort_values("created_at")
+        df = self.runs_df[self.runs_df["trial_id"] == trial_id].sort_values(
+            "created_at"
+        )
         return df.to_dict("records")
 
     @lru_cache(maxsize=32)
@@ -257,20 +266,23 @@ class DataManager:
 
         # Accuracy is defined on finished trials only
         finished_mask = self.trials_df["status"] == TrialStatus.FINISHED.value
-        avg_accuracy = float(
-            self.trials_df.loc[finished_mask, "accuracy"].mean())
+        avg_accuracy = float(self.trials_df.loc[finished_mask, "accuracy"].mean())
 
         avg_latency_ms = float(self.runs_df["latency_ms"].mean())
 
-        active_trials = int(self.trials_df["status"].isin(
-            [TrialStatus.PENDING.value, TrialStatus.RUNNING.value]).sum()
+        active_trials = int(
+            self.trials_df["status"]
+            .isin([TrialStatus.PENDING.value, TrialStatus.RUNNING.value])
+            .sum()
         )
         failed_trials = int(
-            (self.trials_df["status"] == TrialStatus.FAILED.value).sum())
+            (self.trials_df["status"] == TrialStatus.FAILED.value).sum()
+        )
 
         success_rate = float(
             (self.trials_df["status"] == TrialStatus.FINISHED.value).sum()
-            / max(total_trials, 1) * 100.0
+            / max(total_trials, 1)
+            * 100.0
         )
 
         # NaNs → sane defaults
@@ -291,12 +303,14 @@ class DataManager:
         """Cost breakdown by experiment (sum of runs, via trial rollup)."""
         # trials already contains total_cost and run_count from _precompute_aggregations
         merged = self.trials_df.merge(
-            self.experiments_df[["id", "name"]], left_on="experiment_id", right_on="id", how="left"
+            self.experiments_df[["id", "name"]],
+            left_on="experiment_id",
+            right_on="id",
+            how="left",
         )
 
-        grouped = (
-            merged.groupby(["experiment_id", "name"], as_index=False)
-            .agg(total_cost=("total_cost", "sum"), run_count=("run_count", "sum"))
+        grouped = merged.groupby(["experiment_id", "name"], as_index=False).agg(
+            total_cost=("total_cost", "sum"), run_count=("run_count", "sum")
         )
 
         total_cost = float(grouped["total_cost"].sum()) or 0.0
@@ -304,13 +318,17 @@ class DataManager:
         result = []
         for _, row in grouped.iterrows():
             cost = float(row["total_cost"])
-            result.append({
-                "experiment_id": int(row["experiment_id"]),
-                "experiment_name": row["name"],
-                "total_cost": cost,
-                "percentage": float(cost / total_cost * 100.0) if total_cost > 0 else 0.0,
-                "run_count": int(row["run_count"]),
-            })
+            result.append(
+                {
+                    "experiment_id": int(row["experiment_id"]),
+                    "experiment_name": row["name"],
+                    "total_cost": cost,
+                    "percentage": float(cost / total_cost * 100.0)
+                    if total_cost > 0
+                    else 0.0,
+                    "run_count": int(row["run_count"]),
+                }
+            )
 
         # Highest spend first
         return sorted(result, key=lambda x: x["total_cost"], reverse=True)
@@ -327,16 +345,14 @@ class DataManager:
         # Pull experiment_id onto runs (via trials) to count unique experiments per day
         tri_cols = ["id", "experiment_id"]
         df = df_runs.merge(
-            self.trials_df[tri_cols], left_on="trial_id", right_on="id", how="left")
+            self.trials_df[tri_cols], left_on="trial_id", right_on="id", how="left"
+        )
 
-        daily = (
-            df.groupby("date", as_index=False)
-            .agg(
-                total_cost=("costs", "sum"),
-                # id_x = runs.id after merge
-                run_count=("id_x", "count"),
-                experiment_count=("experiment_id", "nunique"),
-            )
+        daily = df.groupby("date", as_index=False).agg(
+            total_cost=("costs", "sum"),
+            # id_x = runs.id after merge
+            run_count=("id_x", "count"),
+            experiment_count=("experiment_id", "nunique"),
         )
 
         daily = daily.sort_values("date")
@@ -347,7 +363,12 @@ class DataManager:
                 "run_count": int(r),
                 "experiment_count": int(e),
             }
-            for d, c, r, e in zip(daily["date"], daily["total_cost"], daily["run_count"], daily["experiment_count"])
+            for d, c, r, e in zip(
+                daily["date"],
+                daily["total_cost"],
+                daily["run_count"],
+                daily["experiment_count"],
+            )
         ]
         return out[-days:]  # last N days (already sorted)
 
@@ -356,17 +377,20 @@ class DataManager:
         q = str(query or "").lower()
 
         # Experiments: name / project_id
-        e_mask = (
-            self.experiments_df["name"].astype(
-                "string").str.lower().str.contains(q, na=False)
-            | self.experiments_df["project_id"].astype("string").str.lower().str.contains(q, na=False)
+        e_mask = self.experiments_df["name"].astype("string").str.lower().str.contains(
+            q, na=False
+        ) | self.experiments_df["project_id"].astype("string").str.lower().str.contains(
+            q, na=False
         )
-        experiments = self.experiments_df.loc[e_mask].head(
-            10).to_dict("records")
+        experiments = self.experiments_df.loc[e_mask].head(10).to_dict("records")
 
         # Trials: by status string (pending/running/finished/failed)
-        t_mask = self.trials_df["status"].astype(
-            "string").str.lower().str.contains(q, na=False)
+        t_mask = (
+            self.trials_df["status"]
+            .astype("string")
+            .str.lower()
+            .str.contains(q, na=False)
+        )
         trials = self.trials_df.loc[t_mask].head(10).to_dict("records")
 
         return {"experiments": experiments, "trials": trials}

@@ -3,13 +3,15 @@ Business logic layer - separates data access from API routes
 """
 from typing import List, Dict, Any, Optional, Tuple
 from functools import lru_cache
-from datetime import datetime, timedelta
 import logging
 
 from app.data_loader import data_manager
 from app.models import (
-    DashboardStats, CostByExperiment, DailyCost,
-    AccuracyCurve, ExperimentFilter, TrialFilter, RunFilter
+    DashboardStats,
+    CostByExperiment,
+    DailyCost,
+    AccuracyCurve,
+    ExperimentFilter,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,8 +25,8 @@ class ExperimentService:
         page: int = 1,
         page_size: int = 20,
         filters: Optional[ExperimentFilter] = None,
-        sort_by: str = 'created_at',
-        sort_order: str = 'desc'
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> Tuple[List[Dict], int]:
         """Get paginated experiments"""
         offset = (page - 1) * page_size
@@ -32,8 +34,7 @@ class ExperimentService:
         filter_dict = {}
         if filters:
             filter_dict = {
-                k: v for k, v in filters.model_dump().items()
-                if v is not None
+                k: v for k, v in filters.model_dump().items() if v is not None
             }
 
         experiments, total = data_manager.get_experiments(
@@ -41,14 +42,14 @@ class ExperimentService:
             limit=page_size,
             filters=filter_dict,
             sort_by=sort_by,
-            sort_order=sort_order
+            sort_order=sort_order,
         )
 
         # Enrich with computed fields
         for exp in experiments:
-            exp['total_trials'] = int(exp.get('trial_count', 0))
-            exp['total_cost'] = float(exp.get('costs', 0))
-            exp['avg_accuracy'] = exp.get('accuracy')
+            exp["total_trials"] = int(exp.get("trial_count", 0))
+            exp["total_cost"] = float(exp.get("costs", 0))
+            exp["avg_accuracy"] = exp.get("accuracy")
 
         return experiments, total
 
@@ -61,18 +62,15 @@ class ExperimentService:
 
         # Add computed fields
         trials = data_manager.get_trials_by_experiment(experiment_id)
-        exp['total_trials'] = len(trials)
-        exp['finished_trials'] = len(
-            [t for t in trials if t['status'] == 'finished'])
-        exp['failed_trials'] = len(
-            [t for t in trials if t['status'] == 'failed'])
+        exp["total_trials"] = len(trials)
+        exp["finished_trials"] = len([t for t in trials if t["status"] == "finished"])
+        exp["failed_trials"] = len([t for t in trials if t["status"] == "failed"])
 
         return exp
 
     @staticmethod
     def get_experiment_trials(
-        experiment_id: int,
-        status: Optional[str] = None
+        experiment_id: int, status: Optional[str] = None
     ) -> List[Dict]:
         """Get all trials for an experiment"""
         return data_manager.get_trials_by_experiment(experiment_id, status)
@@ -94,8 +92,8 @@ class TrialService:
 
         # Add any computed fields if needed
         for run in runs:
-            run['cost_per_token'] = (
-                run['costs'] / run['tokens'] if run.get('tokens', 0) > 0 else 0
+            run["cost_per_token"] = (
+                run["costs"] / run["tokens"] if run.get("tokens", 0) > 0 else 0
             )
 
         return runs
@@ -107,19 +105,19 @@ class TrialService:
 
         if not runs:
             return {
-                'total_runs': 0,
-                'total_cost': 0,
-                'avg_latency': 0,
-                'total_tokens': 0
+                "total_runs": 0,
+                "total_cost": 0,
+                "avg_latency": 0,
+                "total_tokens": 0,
             }
 
         return {
-            'total_runs': len(runs),
-            'total_cost': sum(r['costs'] for r in runs),
-            'avg_latency': sum(r['latency_ms'] for r in runs) / len(runs),
-            'total_tokens': sum(r['tokens'] for r in runs),
-            'min_latency': min(r['latency_ms'] for r in runs),
-            'max_latency': max(r['latency_ms'] for r in runs)
+            "total_runs": len(runs),
+            "total_cost": sum(r["costs"] for r in runs),
+            "avg_latency": sum(r["latency_ms"] for r in runs) / len(runs),
+            "total_tokens": sum(r["tokens"] for r in runs),
+            "min_latency": min(r["latency_ms"] for r in runs),
+            "max_latency": max(r["latency_ms"] for r in runs),
         }
 
 
@@ -150,20 +148,14 @@ class MetricsService:
     def get_performance_metrics() -> Dict:
         """Get various performance metrics"""
         return {
-            'avg_tokens_per_run': float(
-                data_manager.runs_df['tokens'].mean()
+            "avg_tokens_per_run": float(data_manager.runs_df["tokens"].mean()),
+            "median_latency": float(data_manager.runs_df["latency_ms"].median()),
+            "p95_latency": float(data_manager.runs_df["latency_ms"].quantile(0.95)),
+            "cost_per_token": float(
+                data_manager.runs_df["costs"].sum()
+                / data_manager.runs_df["tokens"].sum()
             ),
-            'median_latency': float(
-                data_manager.runs_df['latency_ms'].median()
-            ),
-            'p95_latency': float(
-                data_manager.runs_df['latency_ms'].quantile(0.95)
-            ),
-            'cost_per_token': float(
-                data_manager.runs_df['costs'].sum() /
-                data_manager.runs_df['tokens'].sum()
-            ),
-            'hourly_run_rate': len(data_manager.runs_df) / 24  # Simplified
+            "hourly_run_rate": len(data_manager.runs_df) / 24,  # Simplified
         }
 
     @staticmethod
@@ -181,7 +173,7 @@ class SearchService:
     def search(query: str, limit: int = 20) -> Dict[str, Any]:
         """Perform full-text search across all entities"""
         if not query or len(query) < 2:
-            return {'experiments': [], 'trials': [], 'runs': []}
+            return {"experiments": [], "trials": [], "runs": []}
 
         results = data_manager.search(query)
 
@@ -201,12 +193,12 @@ class SearchService:
         suggestions = set()
 
         # Get experiment names
-        for name in data_manager.experiments_df['name']:
+        for name in data_manager.experiments_df["name"]:
             if name.lower().startswith(prefix_lower):
                 suggestions.add(name)
 
         # Get project IDs
-        for project in data_manager.experiments_df['project_id'].unique():
+        for project in data_manager.experiments_df["project_id"].unique():
             if project.lower().startswith(prefix_lower):
                 suggestions.add(project)
 
@@ -222,33 +214,39 @@ class AnalyticsService:
         anomalies = []
 
         # Detect high-cost runs
-        cost_threshold = data_manager.runs_df['costs'].quantile(0.95)
+        cost_threshold = data_manager.runs_df["costs"].quantile(0.95)
         high_cost_runs = data_manager.runs_df[
-            data_manager.runs_df['costs'] > cost_threshold
+            data_manager.runs_df["costs"] > cost_threshold
         ]
 
         for _, run in high_cost_runs.iterrows():
-            anomalies.append({
-                'type': 'high_cost',
-                'trial_id': int(run['trial_id']),
-                'value': float(run['costs']),
-                'threshold': float(cost_threshold),
-                'severity': 'warning'
-            })
+            anomalies.append(
+                {
+                    "type": "high_cost",
+                    "trial_id": int(run["trial_id"]),
+                    "value": float(run["costs"]),
+                    "threshold": float(cost_threshold),
+                    "severity": "warning",
+                }
+            )
 
         # Detect failed trials pattern
-        failed_by_exp = data_manager.trials_df[
-            data_manager.trials_df['status'] == 'failed'
-        ].groupby('experiment_id').size()
+        failed_by_exp = (
+            data_manager.trials_df[data_manager.trials_df["status"] == "failed"]
+            .groupby("experiment_id")
+            .size()
+        )
 
         for exp_id, count in failed_by_exp.items():
             if count > 2:  # More than 2 failures
-                anomalies.append({
-                    'type': 'high_failure_rate',
-                    'experiment_id': int(exp_id),
-                    'failed_count': int(count),
-                    'severity': 'critical'
-                })
+                anomalies.append(
+                    {
+                        "type": "high_failure_rate",
+                        "experiment_id": int(exp_id),
+                        "failed_count": int(count),
+                        "severity": "critical",
+                    }
+                )
 
         return anomalies
 
@@ -257,31 +255,39 @@ class AnalyticsService:
         """Calculate trends and insights"""
         # Calculate accuracy trend
         finished_trials = data_manager.trials_df[
-            data_manager.trials_df['status'] == 'finished'
-        ].sort_values('created_at')
+            data_manager.trials_df["status"] == "finished"
+        ].sort_values("created_at")
 
         # Rolling mean for accuracy
         if len(finished_trials) > 5:
-            accuracy_trend = finished_trials['accuracy'].rolling(
-                window=5).mean()
-            improving = accuracy_trend.iloc[-1] > accuracy_trend.iloc[-5] if len(
-                accuracy_trend) >= 5 else None
+            accuracy_trend = finished_trials["accuracy"].rolling(window=5).mean()
+            improving = (
+                accuracy_trend.iloc[-1] > accuracy_trend.iloc[-5]
+                if len(accuracy_trend) >= 5
+                else None
+            )
         else:
             improving = None
 
         # Cost trend
         daily_costs = data_manager.get_daily_costs(7)
         if len(daily_costs) >= 2:
-            cost_trend = 'increasing' if daily_costs[-1]['total_cost'] > daily_costs[0]['total_cost'] else 'decreasing'
+            cost_trend = (
+                "increasing"
+                if daily_costs[-1]["total_cost"] > daily_costs[0]["total_cost"]
+                else "decreasing"
+            )
         else:
-            cost_trend = 'stable'
+            cost_trend = "stable"
 
         return {
-            'accuracy_improving': improving,
-            'cost_trend': cost_trend,
-            'avg_trial_duration': float(
-                data_manager.trials_df['duration_seconds'].mean()
-            ) if 'duration_seconds' in data_manager.trials_df.columns else None,
+            "accuracy_improving": improving,
+            "cost_trend": cost_trend,
+            "avg_trial_duration": float(
+                data_manager.trials_df["duration_seconds"].mean()
+            )
+            if "duration_seconds" in data_manager.trials_df.columns
+            else None,
             # experiments per day
-            'experiment_velocity': len(data_manager.experiments_df) / 30
+            "experiment_velocity": len(data_manager.experiments_df) / 30,
         }
