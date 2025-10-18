@@ -1,68 +1,173 @@
 """
-Lightweight configuration for CSV-based backend
+Pydantic models for type safety and validation
 """
-from pydantic_settings import BaseSettings
-from pydantic import Field
-from typing import List
-from functools import lru_cache
-import os
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, List, Dict, Any, Literal
+from datetime import datetime
+from enum import Enum
 
 
-class Settings(BaseSettings):
-    # API Configuration
-    api_title: str = "LLM Observability Platform"
-    api_version: str = "0.1.0"
-    api_prefix: str = "/api/v1"
+class TrialStatus(str, Enum):
+    """Trial status enumeration"""
+    PENDING = "pending"
+    RUNNING = "running"
+    FINISHED = "finished"
+    FAILED = "failed"
 
-    # Server
-    host: str = "0.0.0.0"
-    port: int = 8000
-    reload: bool = True
 
-    # CORS
-    cors_origins: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:3001"]
+# ============= Response Models =============
+
+class Experiment(BaseModel):
+    """Experiment model"""
+    id: int
+    name: str
+    project_id: str
+    created_at: datetime
+    is_deleted: bool = False
+
+    # Computed fields (added by service layer)
+    total_trials: Optional[int] = 0
+    total_runs: Optional[int] = 0
+    total_cost: Optional[float] = 0
+    avg_accuracy: Optional[float] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class Trial(BaseModel):
+    """Trial model"""
+    id: int
+    experiment_id: int
+    status: TrialStatus
+    created_at: datetime
+    accuracy: Optional[float] = None
+    duration_seconds: Optional[int] = Field(None, alias="duration(s)")
+
+    # Computed fields
+    total_runs: Optional[int] = 0
+    total_cost: Optional[float] = 0
+    avg_latency: Optional[float] = None
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
     )
 
-    # Data Configuration
-    data_dir: str = "data"
-    experiments_file: str = "experiments.csv"
-    trials_file: str = "trials.csv"
-    runs_file: str = "runs.csv"
 
-    # Cache Configuration
-    cache_ttl: int = 300  # 5 minutes
-    enable_cache: bool = True
+class Run(BaseModel):
+    """Run model"""
+    id: int
+    trial_id: int
+    tokens: int
+    costs: float
+    latency_ms: int = Field(alias="latency(ms)")
+    created_at: datetime
 
-    # Performance
-    pagination_limit: int = 20
-    max_results: int = 1000
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
 
-    # Optional: OpenAI for chatbot
-    openai_api_key: str = ""
-    enable_chatbot: bool = False
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+# ============= API Response Models =============
+
+class PaginatedResponse(BaseModel):
+    """Paginated response wrapper"""
+    items: List[Any]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class DashboardStats(BaseModel):
+    """Dashboard statistics"""
+    total_experiments: int
+    total_trials: int
+    total_runs: int
+    total_cost: float
+    avg_accuracy: float
+    avg_latency_ms: float
+    active_trials: int
+    failed_trials: int
+    success_rate: float
+
+
+class CostByExperiment(BaseModel):
+    """Cost breakdown by experiment"""
+    experiment_id: int
+    experiment_name: str
+    total_cost: float
+    percentage: float
+    run_count: int
+
+
+class DailyCost(BaseModel):
+    """Daily cost aggregation"""
+    date: str
+    total_cost: float
+    run_count: int
+    experiment_count: int
+
+
+class AccuracyCurve(BaseModel):
+    """Accuracy curve data point"""
+    trial_id: int
+    timestamp: datetime
+    accuracy: float
+    status: TrialStatus
+
+
+# ============= Request Models =============
+
+class QueryParams(BaseModel):
+    """Common query parameters"""
+    page: int = Field(1, ge=1)
+    page_size: int = Field(20, ge=1, le=100)
+    sort_by: Optional[str] = None
+    sort_order: Literal["asc", "desc"] = "desc"
 
     @property
-    def experiments_path(self) -> str:
-        return os.path.join(self.data_dir, self.experiments_file)
-
-    @property
-    def trials_path(self) -> str:
-        return os.path.join(self.data_dir, self.trials_file)
-
-    @property
-    def runs_path(self) -> str:
-        return os.path.join(self.data_dir, self.runs_file)
+    def offset(self) -> int:
+        return (self.page - 1) * self.page_size
 
 
-@lru_cache()
-def get_settings() -> Settings:
-    """Cache settings instance"""
-    return Settings()
+class ExperimentFilter(BaseModel):
+    """Experiment filter parameters"""
+    name: Optional[str] = None
+    project_id: Optional[str] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
 
 
-settings = get_settings()
+class TrialFilter(BaseModel):
+    """Trial filter parameters"""
+    experiment_id: Optional[int] = None
+    status: Optional[TrialStatus] = None
+    min_accuracy: Optional[float] = Field(None, ge=0, le=1)
+    max_accuracy: Optional[float] = Field(None, ge=0, le=1)
+
+
+class RunFilter(BaseModel):
+    """Run filter parameters"""
+    trial_id: Optional[int] = None
+    min_cost: Optional[float] = Field(None, ge=0)
+    max_cost: Optional[float] = Field(None, ge=0)
+    min_latency: Optional[int] = Field(None, ge=0)
+    max_latency: Optional[int] = Field(None, ge=0)
+
+
+# ============= Chat Models (Bonus) =============
+
+class ChatRequest(BaseModel):
+    """Chat request for analysis"""
+    message: str
+    experiment_id: Optional[int] = None
+    include_context: bool = True
+
+
+class ChatResponse(BaseModel):
+    """Chat response with context"""
+    response: str
+    context_used: List[str] = []
+    relevant_experiments: List[int] = []
