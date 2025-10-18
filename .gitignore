@@ -83,3 +83,12 @@ temp/
 
 # Docker
 .docker/
+
+
+.venv/
+venv/
+miniProject/
+
+
+lib/
+lib64/
