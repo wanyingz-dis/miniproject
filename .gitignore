@@ -92,3 +92,19 @@ miniProject/
 
 lib/
 lib64/
+
+
+# Vite cache
+frontend/.vite/
+
+# ESLint cache  
+frontend/.eslintcache
+
+#  
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# 
+.vercel/
+.netlify/
