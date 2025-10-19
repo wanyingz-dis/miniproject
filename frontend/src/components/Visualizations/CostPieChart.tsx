@@ -1,141 +1,116 @@
 import { useEffect, useRef } from "react";
 import * as d3 from "d3";
-import type { CostByExperiment } from "../../types";
 
-type Props = {
-    data: CostByExperiment[];
-    onSliceClick?: (experimentId: number) => void;
-    height?: number;
+type Slice = {
+    experiment_id: number;
+    experiment_name: string;
+    total_cost: number;
+    percentage?: number;
+    run_count?: number;
 };
 
-export default function CostPieChart({ data, onSliceClick, height = 320 }: Props) {
-    const containerRef = useRef<HTMLDivElement | null>(null);
+export default function CostPieChart({
+    data,
+    onSliceClick,
+    width = 520,
+    height = 360,
+}: {
+    data: Slice[];
+    onSliceClick?: (id: number) => void;
+    width?: number;
+    height?: number;
+}) {
     const svgRef = useRef<SVGSVGElement | null>(null);
-    const tooltipRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        if (!containerRef.current) return;
+        if (!data?.length) return;
 
-        const container = containerRef.current;
-        const svg = d3.select(svgRef.current!);
-        const tooltip = d3.select(tooltipRef.current!);
+        const radius = Math.min(width, height) / 2;
+        const arc = d3.arc<d3.PieArcDatum<Slice>>().innerRadius(0).outerRadius(radius - 8);
+        const arcHover = d3.arc<d3.PieArcDatum<Slice>>().innerRadius(0).outerRadius(radius + 8);
 
-        const ro = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                const width = Math.floor(entry.contentRect.width);
-                render(width, height);
-            }
-        });
-        ro.observe(container);
+        const pie = d3
+            .pie<Slice>()
+            .value((d) => d.total_cost)
+            .sort(null);
 
-        return () => ro.disconnect();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        const color = d3.scaleOrdinal<string>().range(d3.schemeTableau10 as unknown as string[]);
 
-    useEffect(() => {
-        if (!containerRef.current) return;
-        const width = Math.floor(containerRef.current.clientWidth || 600);
-        render(width, height);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [data, height]);
-
-    function render(width: number, height: number) {
-        const margin = 12;
-        const r = Math.min(width, height) / 2 - margin;
-
+        // cleanup then draw
         const svg = d3
             .select(svgRef.current!)
             .attr("width", width)
             .attr("height", height);
-
         svg.selectAll("*").remove();
 
         const g = svg
             .append("g")
             .attr("transform", `translate(${width / 2},${height / 2})`);
 
-        const color = d3.scaleOrdinal<string>()
-            .domain(data.map(d => String(d.experiment_id)))
-            .range(d3.schemeTableau10 as readonly string[]);
+        const tooltip = d3
+            .select(svgRef.current!.parentElement)
+            .append("div")
+            .style("position", "absolute")
+            .style("pointer-events", "none")
+            .style("background", "white")
+            .style("border", "1px solid #e5e7eb")
+            .style("padding", "8px 10px")
+            .style("border-radius", "6px")
+            .style("font-size", "12px")
+            .style("box-shadow", "0 6px 14px rgba(0,0,0,.08)")
+            .style("opacity", 0);
 
-        const pie = d3
-            .pie<CostByExperiment>()
-            .value((d) => d.total_cost)
-            .sort(null);
-
-        const arcs = pie(data);
-
-        const arcGen = d3.arc<d3.PieArcDatum<CostByExperiment>>()
-            .innerRadius(0)
-            .outerRadius(r);
-
-        const arcGenHover = d3.arc<d3.PieArcDatum<CostByExperiment>>()
-            .innerRadius(0)
-            .outerRadius(r + 10);
-
-        const paths = g
-            .selectAll("path.slice")
-            .data(arcs, (d: any) => d.data.experiment_id)
-            .join("path")
-            .attr("class", "slice")
-            .attr("fill", (d) => color(String(d.data.experiment_id)) as string)
-            .attr("d", arcGen as any)
+        const arcs = g
+            .selectAll("path")
+            .data(pie(data))
+            .enter()
+            .append("path")
+            .attr("fill", (d, i) => color(String(i)))
+            .attr("d", arc)
             .style("cursor", "pointer")
-            .on("pointerenter", function (event, d) {
-                d3.select(this).transition().duration(150).attr("d", arcGenHover as any);
-                showTooltip(event, d);
+            .on("mouseenter", function (event, d) {
+                d3.select(this).transition().duration(150).attr("d", arcHover(d));
+                const pct = d.data.percentage ?? (d.data.total_cost / d3.sum(data, (x) => x.total_cost)) * 100;
+                tooltip
+                    .style("opacity", 1)
+                    .html(
+                        `<div style="font-weight:600;margin-bottom:4px">${d.data.experiment_name}</div>
+             <div>Cost: $${d.data.total_cost.toFixed(2)}</div>
+             <div>Share: ${pct.toFixed(1)}%</div>
+             ${d.data.run_count != null ? `<div>Runs: ${d.data.run_count}</div>` : ""}`
+                    );
             })
-            .on("pointermove", function (event, d) {
-                showTooltip(event, d);
+            .on("mousemove", function (event) {
+                tooltip.style("left", event.offsetX + 16 + "px").style("top", event.offsetY + 16 + "px");
             })
-            .on("pointerleave", function () {
-                d3.select(this).transition().duration(150).attr("d", arcGen as any);
-                hideTooltip();
+            .on("mouseleave", function (_event, d) {
+                d3.select(this).transition().duration(150).attr("d", arc(d));
+                tooltip.style("opacity", 0);
             })
             .on("click", (_event, d) => {
                 onSliceClick?.(d.data.experiment_id);
             });
 
-        // Labels (optional)
-        const labelArc = d3.arc<d3.PieArcDatum<CostByExperiment>>()
-            .innerRadius(r * 0.6)
-            .outerRadius(r * 0.6);
+        // labels（avoid too much hiding, only display the max 3）
+        const top = [...data].sort((a, b) => b.total_cost - a.total_cost).slice(0, 3);
+        const showIds = new Set(top.map((t) => t.experiment_id));
 
         g.selectAll("text.label")
-            .data(arcs)
-            .join("text")
-            .attr("class", "text-xs fill-gray-700")
-            .attr("transform", (d) => `translate(${labelArc.centroid(d)})`)
+            .data(pie(data).filter((d) => showIds.has(d.data.experiment_id)))
+            .enter()
+            .append("text")
+            .attr("class", "label")
+            .attr("transform", (d) => `translate(${arc.centroid(d)})`)
+            .attr("dy", "0.35em")
             .attr("text-anchor", "middle")
-            .text((d) => d.data.experiment_name)
-            .style("pointer-events", "none");
+            .style("font-size", "12px")
+            .style("fill", "#111827")
+            .text((d) => d.data.experiment_name);
 
-        function showTooltip(event: PointerEvent, d: d3.PieArcDatum<CostByExperiment>) {
-            const html = `
-        <div class="font-medium">${d.data.experiment_name}</div>
-        <div>Total cost: $${d.data.total_cost.toFixed(2)}</div>
-        <div>Runs: ${d.data.run_count}</div>
-        <div>Share: ${d.data.percentage.toFixed(1)}%</div>
-      `;
-            tooltip
-                .html(html)
-                .style("opacity", 1)
-                .style("left", `${event.offsetX + 16}px`)
-                .style("top", `${event.offsetY + 16}px`);
-        }
-        function hideTooltip() {
-            tooltip.style("opacity", 0);
-        }
-    }
+        return () => {
+            tooltip.remove();
+        };
+    }, [data, height, width, onSliceClick]);
 
-    return (
-        <div ref={containerRef} className="relative w-full" style={{ height }}>
-            <svg ref={svgRef} />
-            <div
-                ref={tooltipRef}
-                className="pointer-events-none absolute z-10 rounded bg-white/90 px-3 py-2 text-sm shadow border border-gray-200"
-                style={{ opacity: 0 }}
-            />
-        </div>
-    );
+    return <svg ref={svgRef} />;
 }
