@@ -111,6 +111,15 @@ async def get_trial_stats(trial_id: int = Path(..., description="Trial ID")):
     """Get aggregated statistics for a trial"""
     return TrialService.get_trial_stats(trial_id)
 
+# add endpoint for fectching trial stats
+@router.get("/trials/{trial_id}")
+async def get_trial_details(trial_id: int = Path(..., description="Trial ID")):
+    """Get single trial details"""
+    trial = TrialService.get_trial_details(trial_id)
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+    return trial
+
 
 # ============= Dashboard & Metrics =============
 @router.get("/dashboard/stats", response_model=DashboardStats)
