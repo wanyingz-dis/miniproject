@@ -177,23 +177,10 @@ export default function CostPieChart({
             });
 
         // Add center text showing total
-        const totalCost = d3.sum(data, d => d.total_cost);
-        const centerText = g.append("g");
+        // const totalCost = d3.sum(data, d => d.total_cost);
+        // const centerText = g.append("g");
 
-        centerText.append("text")
-            .attr("text-anchor", "middle")
-            .attr("dy", "-0.2em")
-            .style("font-size", "24px")
-            .style("font-weight", "600")
-            .style("fill", "#1f2937")
-            .text(`$${totalCost.toFixed(0)}`);
 
-        centerText.append("text")
-            .attr("text-anchor", "middle")
-            .attr("dy", "1.2em")
-            .style("font-size", "14px")
-            .style("fill", "#6b7280")
-            .text("Total Cost");
 
         // Add legend on the side
         const legend = svg.append("g")
