@@ -35,10 +35,20 @@ export default function ExperimentDetail() {
         };
 
         return (
-            <span className={`px-2 py-1 text-xs rounded-full ${colors[status]}`}>
+            <span className={`px-2 py-1 text-xs rounded-full ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
                 {status}
             </span>
         );
+    };
+
+    // Helper function to safely format dates
+    const formatDate = (dateString: string | null | undefined, formatStr: string) => {
+        if (!dateString) return 'N/A';
+        try {
+            return format(new Date(dateString), formatStr);
+        } catch {
+            return 'Invalid date';
+        }
     };
 
     if (!experiment || !trialsData) {
@@ -71,7 +81,7 @@ export default function ExperimentDetail() {
                         <h1 className="text-2xl font-bold text-gray-900">{experiment.name}</h1>
                         <p className="text-gray-600 mt-1">Project: {experiment.project_id}</p>
                         <p className="text-sm text-gray-500 mt-2">
-                            Created: {format(new Date(experiment.created_at), 'PPP')}
+                            Created: {formatDate(experiment.created_at, 'PPP')}
                         </p>
                     </div>
                     <div className="text-right">
@@ -179,7 +189,7 @@ export default function ExperimentDetail() {
                                     ${trial.total_cost?.toFixed(2) || '0.00'}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {format(new Date(trial.created_at), 'MMM d, HH:mm')}
+                                    {formatDate(trial.created_at, 'MMM d, HH:mm')}
                                 </td>
                             </tr>
                         ))}
