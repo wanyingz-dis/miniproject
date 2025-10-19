@@ -121,7 +121,12 @@ class TrialService:
             "min_latency": min(r["latency_ms"] for r in runs),
             "max_latency": max(r["latency_ms"] for r in runs),
         }
+    
 
+    # Fetch trial from dataframe by ID
+    # Join with experiments to get experiment name
+    # Include computed stats(total_runs, total_cost, avg_latency)
+    # Should return None if not found
     @staticmethod
     def get_trial_details(trial_id: int):
         """Get detailed trial information"""
@@ -129,6 +134,7 @@ class TrialService:
         trial_row = data_manager.trials_df[data_manager.trials_df['id'] == trial_id]
         if trial_row.empty:
             return None
+        
 
         trial = trial_row.iloc[0].to_dict()
 
