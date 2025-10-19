@@ -8,7 +8,7 @@ export default function TrialDetail() {
     const { id } = useParams<{ id: string }>();
     const trialId = parseInt(id || '0');
 
-    // State for search, sort, and filter
+    // State for search, sort, and filter  
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<'created_at' | 'costs' | 'tokens' | 'latency_ms'>('created_at');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -28,7 +28,7 @@ export default function TrialDetail() {
         enabled: !!trialId,
     });
 
-    // Process runs with search and filters
+    // Process runs with search and filters 
     const processedRuns = useMemo(() => {
         if (!runsData?.runs) return [];
 
@@ -51,7 +51,7 @@ export default function TrialDetail() {
             filtered = filtered.filter(run => run.costs <= avgCost);
         }
 
-        // Apply sorting
+        // Apply sorting 
         filtered.sort((a, b) => {
             const aVal = a[sortBy] || 0;
             const bVal = b[sortBy] || 0;
@@ -63,7 +63,7 @@ export default function TrialDetail() {
         return filtered;
     }, [runsData, searchTerm, sortBy, sortOrder, costFilter]);
 
-    // Calculate statistics
+    // Calculate statistics 
     const stats = useMemo(() => {
         if (!runsData?.runs || runsData.runs.length === 0) {
             return {
