@@ -3,14 +3,16 @@ import { useState } from 'react';
 import Dashboard from '../components/Dashboard/Dashboard';
 import Experiments from '../components/Experiments/Experiments';
 import ExperimentDetail from '../components/Experiments/ExperimentDetail';
+import TrialDetail from '../components/Trials/TrialDetail';
+
 
 function App() {
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
     const navigation = [
-        { name: 'Dashboard', href: '/', icon: '📊' },
-        { name: 'Experiments', href: '/experiments', icon: '🐈‍⬛' },
+        { name: 'Dashboard', href: '/', icon: ' ' },
+        { name: 'Experiments', href: '/experiments', icon: ' ' },
     ];
 
     return (
@@ -69,6 +71,7 @@ function App() {
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/experiments" element={<Experiments />} />
                     <Route path="/experiments/:id" element={<ExperimentDetail />} />
+                    <Route path="/trials/:id" element={<TrialDetail />} />
                 </Routes>
             </div>
         </div>
