@@ -70,6 +70,12 @@ export default {
         const { data } = await api.get(`/trials/${trialId}/runs`);
         return data;
     },
+
+    // Add trial detail page route to applications
+    async getTrialDetails(id: number): Promise<any> {
+        const { data } = await api.get(`/trials/${id}`);
+        return data;
+    },
 };
 
 export type { Experiment };
