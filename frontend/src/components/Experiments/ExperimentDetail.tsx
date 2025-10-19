@@ -156,7 +156,12 @@ export default function ExperimentDetail() {
                         {trialsData.trials.map((trial) => (
                             <tr key={trial.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    #{trial.id}
+                                    <Link
+                                        to={`/trials/${trial.id}`}
+                                        className="text-primary-600 hover:text-primary-900"
+                                    >
+                                        #{trial.id}
+                                    </Link>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <StatusBadge status={trial.status} />
