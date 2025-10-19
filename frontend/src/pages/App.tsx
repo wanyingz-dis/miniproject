@@ -10,7 +10,7 @@ function App() {
 
     const navigation = [
         { name: 'Dashboard', href: '/', icon: '📊' },
-        { name: 'Experiments', href: '/experiments', icon: '🧪' },
+        { name: 'Experiments', href: '/experiments', icon: '🐈‍⬛' },
     ];
 
     return (
@@ -56,7 +56,7 @@ function App() {
                         {sidebarOpen && (
                             <div className="text-sm text-gray-500">
                                 <p>Version 0.1.0</p>
-                                <p className="mt-1">© 2024 LLM Observatory</p>
+                                <p className="mt-1">© 2025 LLM Observatory</p>
                             </div>
                         )}
                     </div>
