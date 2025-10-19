@@ -75,9 +75,16 @@ export default function Dashboard() {
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
     return (
-        <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-sm text-gray-500">{label}</div>
-            <div className="text-2xl font-semibold">{value}</div>
+        <div className="relative overflow-hidden bg-white/80 backdrop-blur-sm rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300 p-6 border border-gray-100">
+            {/* Gradient overlay */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary-100 to-accent-100 rounded-full blur-3xl opacity-30 -mr-16 -mt-16"></div>
+
+            <div className="relative">
+                <div className="text-sm text-gray-600 font-medium mb-1">{label}</div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+                    {value}
+                </div>
+            </div>
         </div>
     );
 }
