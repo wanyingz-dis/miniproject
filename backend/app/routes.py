@@ -1,6 +1,7 @@
 """
 API Routes - Clean separation of HTTP handling from business logic
 """
+
 from fastapi import APIRouter, HTTPException, Query, Path
 from typing import Optional, List
 import logging

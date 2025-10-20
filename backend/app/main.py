@@ -1,6 +1,7 @@
 """
 Main FastAPI Application - Lightweight but Production-Ready
 """
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -145,9 +146,9 @@ async def status():
     return {
         "status": "operational",
         "data_loaded": data_manager._initialized,
-        "experiments_count": len(data_manager.experiments_df)
-        if data_manager._initialized
-        else 0,
+        "experiments_count": (
+            len(data_manager.experiments_df) if data_manager._initialized else 0
+        ),
         "trials_count": len(data_manager.trials_df) if data_manager._initialized else 0,
         "runs_count": len(data_manager.runs_df) if data_manager._initialized else 0,
         "version": settings.api_version,

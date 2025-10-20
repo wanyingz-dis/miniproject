@@ -8,6 +8,7 @@ Why this version?
 - Uses explicit merge keys (left_on / right_on) so pandas never "guesses".
 - Small, readable helpers + human comments so future-you understands it fast.
 """
+
 from __future__ import annotations
 
 import logging
@@ -323,9 +324,9 @@ class DataManager:
                     "experiment_id": int(row["experiment_id"]),
                     "experiment_name": row["name"],
                     "total_cost": cost,
-                    "percentage": float(cost / total_cost * 100.0)
-                    if total_cost > 0
-                    else 0.0,
+                    "percentage": (
+                        float(cost / total_cost * 100.0) if total_cost > 0 else 0.0
+                    ),
                     "run_count": int(row["run_count"]),
                 }
             )

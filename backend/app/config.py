@@ -1,6 +1,7 @@
 """
 Lightweight configuration for CSV-based backend
 """
+
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import List

@@ -1,6 +1,7 @@
 """
 Pydantic models for type safety and validation
 """
+
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Any, Literal
 from datetime import datetime

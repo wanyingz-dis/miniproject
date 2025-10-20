@@ -1,6 +1,7 @@
 """
 Business logic layer - separates data access from API routes
 """
+
 from typing import List, Dict, Any, Optional, Tuple
 from functools import lru_cache
 import logging
@@ -315,11 +316,11 @@ class AnalyticsService:
         return {
             "accuracy_improving": improving,
             "cost_trend": cost_trend,
-            "avg_trial_duration": float(
-                data_manager.trials_df["duration_seconds"].mean()
-            )
-            if "duration_seconds" in data_manager.trials_df.columns
-            else None,
+            "avg_trial_duration": (
+                float(data_manager.trials_df["duration_seconds"].mean())
+                if "duration_seconds" in data_manager.trials_df.columns
+                else None
+            ),
             # experiments per day
             "experiment_velocity": len(data_manager.experiments_df) / 30,
         }
