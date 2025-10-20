@@ -111,6 +111,7 @@ async def get_trial_stats(trial_id: int = Path(..., description="Trial ID")):
     """Get aggregated statistics for a trial"""
     return TrialService.get_trial_stats(trial_id)
 
+
 # add endpoint for fectching trial stats
 @router.get("/trials/{trial_id}")
 async def get_trial_details(trial_id: int = Path(..., description="Trial ID")):

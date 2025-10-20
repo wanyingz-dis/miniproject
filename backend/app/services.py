@@ -63,10 +63,8 @@ class ExperimentService:
         # Add computed fields
         trials = data_manager.get_trials_by_experiment(experiment_id)
         exp["total_trials"] = len(trials)
-        exp["finished_trials"] = len(
-            [t for t in trials if t["status"] == "finished"])
-        exp["failed_trials"] = len(
-            [t for t in trials if t["status"] == "failed"])
+        exp["finished_trials"] = len([t for t in trials if t["status"] == "finished"])
+        exp["failed_trials"] = len([t for t in trials if t["status"] == "failed"])
 
         return exp
 
@@ -131,26 +129,26 @@ class TrialService:
     def get_trial_details(trial_id: int):
         """Get detailed trial information"""
         # Find the trial in the dataframe
-        trial_row = data_manager.trials_df[data_manager.trials_df['id'] == trial_id]
+        trial_row = data_manager.trials_df[data_manager.trials_df["id"] == trial_id]
         if trial_row.empty:
             return None
 
         trial = trial_row.iloc[0].to_dict()
 
         # Get the experiment name
-        exp_row = data_manager.experiments_df[data_manager.experiments_df['id']
-                                              == trial['experiment_id']]
+        exp_row = data_manager.experiments_df[
+            data_manager.experiments_df["id"] == trial["experiment_id"]
+        ]
         if not exp_row.empty:
-            trial['experiment_name'] = exp_row.iloc[0]['name']
+            trial["experiment_name"] = exp_row.iloc[0]["name"]
 
         # Add run statistics
         runs = data_manager.get_runs_by_trial(trial_id)
         if runs:
-            trial['total_runs'] = len(runs)
-            trial['total_cost'] = sum(r['costs'] for r in runs)
-            trial['avg_latency'] = sum(r['latency_ms']
-                                       for r in runs) / len(runs)
-            trial['total_tokens'] = sum(r['tokens'] for r in runs)
+            trial["total_runs"] = len(runs)
+            trial["total_cost"] = sum(r["costs"] for r in runs)
+            trial["avg_latency"] = sum(r["latency_ms"] for r in runs) / len(runs)
+            trial["total_tokens"] = sum(r["tokens"] for r in runs)
 
         return trial
 
@@ -294,8 +292,7 @@ class AnalyticsService:
 
         # Rolling mean for accuracy
         if len(finished_trials) > 5:
-            accuracy_trend = finished_trials["accuracy"].rolling(
-                window=5).mean()
+            accuracy_trend = finished_trials["accuracy"].rolling(window=5).mean()
             improving = (
                 accuracy_trend.iloc[-1] > accuracy_trend.iloc[-5]
                 if len(accuracy_trend) >= 5
