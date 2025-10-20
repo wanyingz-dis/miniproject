@@ -290,31 +290,43 @@ class DataManager:
     @lru_cache(maxsize=32)
     def get_dashboard_stats(self) -> Dict[str, Any]:
         """High-level KPIs used by the dashboard. Cached for speed."""
-        total_experiments = int(len(self.experiments_df))
-        total_trials = int(len(self.trials_df))
-        total_runs = int(len(self.runs_df))
+        # Filter out deleted experiments
+        active_experiments = self.experiments_df[self.experiments_df["is_deleted"] ==
+                                                 False] if "is_deleted" in self.experiments_df.columns else self.experiments_df
+        active_experiment_ids = active_experiments["id"].tolist()
 
-        # Total cost is straight from runs
-        total_cost = float(self.runs_df["costs"].sum())
+        total_experiments = int(len(active_experiments))
 
-        # Accuracy is defined on finished trials only
-        finished_mask = self.trials_df["status"] == TrialStatus.FINISHED.value
+        # Only count trials and runs from active experiments
+        active_trials = self.trials_df[self.trials_df["experiment_id"].isin(
+            active_experiment_ids)]
+        total_trials = int(len(active_trials))
+
+        active_runs = self.runs_df[self.runs_df["trial_id"].isin(
+            active_trials["id"])]
+        total_runs = int(len(active_runs))
+
+        # Total cost from active runs only
+        total_cost = float(active_runs["costs"].sum())
+
+        # Accuracy is defined on finished trials only (from active experiments)
+        finished_mask = active_trials["status"] == TrialStatus.FINISHED.value
         avg_accuracy = float(
-            self.trials_df.loc[finished_mask, "accuracy"].mean())
+            active_trials.loc[finished_mask, "accuracy"].mean())
 
-        avg_latency_ms = float(self.runs_df["latency_ms"].mean())
+        avg_latency_ms = float(active_runs["latency_ms"].mean())
 
-        active_trials = int(
-            self.trials_df["status"]
+        active_trial_count = int(
+            active_trials["status"]
             .isin([TrialStatus.PENDING.value, TrialStatus.RUNNING.value])
             .sum()
         )
         failed_trials = int(
-            (self.trials_df["status"] == TrialStatus.FAILED.value).sum()
+            (active_trials["status"] == TrialStatus.FAILED.value).sum()
         )
 
         success_rate = float(
-            (self.trials_df["status"] == TrialStatus.FINISHED.value).sum()
+            (active_trials["status"] == TrialStatus.FINISHED.value).sum()
             / max(total_trials, 1)
             * 100.0
         )
@@ -327,7 +339,7 @@ class DataManager:
             "total_cost": total_cost if pd.notna(total_cost) else 0.0,
             "avg_accuracy": avg_accuracy if pd.notna(avg_accuracy) else None,
             "avg_latency_ms": avg_latency_ms if pd.notna(avg_latency_ms) else None,
-            "active_trials": active_trials,
+            "active_trials": active_trial_count,
             "failed_trials": failed_trials,
             "success_rate": success_rate if pd.notna(success_rate) else 0.0,
         }
@@ -335,9 +347,18 @@ class DataManager:
 
     def get_cost_by_experiment(self) -> List[Dict]:
         """Cost breakdown by experiment (sum of runs, via trial rollup)."""
+        # Filter out deleted experiments
+        active_experiments = self.experiments_df[self.experiments_df["is_deleted"] ==
+                                                 False] if "is_deleted" in self.experiments_df.columns else self.experiments_df
+        active_experiment_ids = active_experiments["id"].tolist()
+
+        # Only include trials from active experiments
+        active_trials = self.trials_df[self.trials_df["experiment_id"].isin(
+            active_experiment_ids)]
+
         # trials already contains total_cost and run_count from _precompute_aggregations
-        merged = self.trials_df.merge(
-            self.experiments_df[["id", "name"]],
+        merged = active_trials.merge(
+            active_experiments[["id", "name"]],
             left_on="experiment_id",
             right_on="id",
             how="left",
