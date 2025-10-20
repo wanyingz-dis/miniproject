@@ -165,14 +165,13 @@ class DataManager:
             ).drop(columns=["trial_id"], errors="ignore")
 
             # Fill NA after the merge (trials with zero runs)
-            self.trials_df[
-                ["total_cost", "total_tokens", "avg_latency_ms", "run_count"]
-            ] = self.trials_df[
-                ["total_cost", "total_tokens", "avg_latency_ms", "run_count"]
-            ].fillna(
-                {"total_cost": 0.0, "total_tokens": 0,
-                    "avg_latency_ms": 0.0, "run_count": 0}
-            )
+            self.trials_df["total_cost"] = self.trials_df["total_cost"].fillna(
+                0.0)
+            self.trials_df["total_tokens"] = self.trials_df["total_tokens"].fillna(
+                0)
+            self.trials_df["avg_latency_ms"] = self.trials_df["avg_latency_ms"].fillna(
+                0.0)
+            self.trials_df["run_count"] = self.trials_df["run_count"].fillna(0)
 
         if self.trials_df is not None and self.experiments_df is not None:
             # Aggregate trials at the experiment level
@@ -247,15 +246,39 @@ class DataManager:
             return row.iloc[0].to_dict()
         return None
 
-    def get_trials_by_experiment(
-        self, experiment_id: int, status_filter: Optional[str] = None
-    ) -> List[Dict]:
+    def get_trials_by_experiment(self, experiment_id: int, status_filter: Optional[str] = None) -> List[Dict]:
         """All trials for an experiment (optionally filter by status)."""
-        df = self.trials_df[self.trials_df["experiment_id"] == experiment_id]
+        df = self.trials_df[self.trials_df["experiment_id"]
+                            == experiment_id].copy()
         if status_filter:
             df = df[df["status"] == status_filter.lower()]
         df = df.sort_values("created_at")
-        return df.to_dict("records")
+
+        # Fill NaN values for aggregated columns
+        if "total_cost" in df.columns:
+            df["total_cost"] = df["total_cost"].fillna(0.0)
+        if "total_tokens" in df.columns:
+            df["total_tokens"] = df["total_tokens"].fillna(0)
+        if "avg_latency_ms" in df.columns:
+            df["avg_latency_ms"] = df["avg_latency_ms"].fillna(0.0)
+        if "run_count" in df.columns:
+            df["run_count"] = df["run_count"].fillna(0)
+
+        # Convert to dict
+        trials = df.to_dict("records")
+
+        # Post-process each trial
+        for trial in trials:
+            # Rename run_count to total_runs
+            if "run_count" in trial:
+                trial["total_runs"] = trial.pop("run_count")
+
+            # Replace any remaining NaN with None for JSON serialization
+            for key, value in list(trial.items()):
+                if pd.isna(value):
+                    trial[key] = None
+
+        return trials
 
     def get_runs_by_trial(self, trial_id: int) -> List[Dict]:
         """All runs for a trial, oldest → newest."""
