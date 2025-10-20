@@ -49,7 +49,8 @@ def _parse_dt(
         s = pd.to_datetime(series, format=fmt, errors="coerce")
         # If many NaT, try a best-effort parse as a fallback
         if s.isna().mean() > 0.5:
-            s = pd.to_datetime(series, errors="coerce", dayfirst=bool(dayfirst))
+            s = pd.to_datetime(series, errors="coerce",
+                               dayfirst=bool(dayfirst))
         return s
     return pd.to_datetime(series, errors="coerce", dayfirst=bool(dayfirst))
 
@@ -91,10 +92,12 @@ class DataManager:
                 "is_del": "is_deleted",
             }
             exp = exp.rename(
-                columns={k: v for k, v in rename_map.items() if k in exp.columns}
+                columns={k: v for k, v in rename_map.items()
+                         if k in exp.columns}
             )
             if "is_deleted" in exp.columns:
-                exp["is_deleted"] = exp["is_deleted"].fillna(False).astype(bool)
+                exp["is_deleted"] = exp["is_deleted"].fillna(
+                    False).astype(bool)
 
             exp = _normalize_df(exp)
 
@@ -167,7 +170,8 @@ class DataManager:
             ] = self.trials_df[
                 ["total_cost", "total_tokens", "avg_latency_ms", "run_count"]
             ].fillna(
-                {"total_cost": 0.0, "total_tokens": 0, "run_count": 0}
+                {"total_cost": 0.0, "total_tokens": 0,
+                    "avg_latency_ms": 0.0, "run_count": 0}
             )
 
         if self.trials_df is not None and self.experiments_df is not None:
@@ -210,10 +214,15 @@ class DataManager:
         """List experiments with simple filters + pagination."""
         df = self.experiments_df.copy()
 
+        # Filter out deleted experiments
+        if "is_deleted" in df.columns:
+            df = df[df["is_deleted"] == False]
+
         # Filters
         if filters:
             if filters.get("name"):
-                df = df[df["name"].str.contains(filters["name"], case=False, na=False)]
+                df = df[df["name"].str.contains(
+                    filters["name"], case=False, na=False)]
             if filters.get("project_id"):
                 df = df[df["project_id"] == filters["project_id"]]
             if filters.get("created_after") is not None:
@@ -227,7 +236,7 @@ class DataManager:
 
         # Page
         total = len(df)
-        df = df.iloc[offset : offset + limit]
+        df = df.iloc[offset: offset + limit]
         return df.to_dict("records"), total
 
     def get_experiment_by_id(self, experiment_id: int) -> Optional[Dict]:
@@ -267,7 +276,8 @@ class DataManager:
 
         # Accuracy is defined on finished trials only
         finished_mask = self.trials_df["status"] == TrialStatus.FINISHED.value
-        avg_accuracy = float(self.trials_df.loc[finished_mask, "accuracy"].mean())
+        avg_accuracy = float(
+            self.trials_df.loc[finished_mask, "accuracy"].mean())
 
         avg_latency_ms = float(self.runs_df["latency_ms"].mean())
 
@@ -325,7 +335,8 @@ class DataManager:
                     "experiment_name": row["name"],
                     "total_cost": cost,
                     "percentage": (
-                        float(cost / total_cost * 100.0) if total_cost > 0 else 0.0
+                        float(cost / total_cost *
+                              100.0) if total_cost > 0 else 0.0
                     ),
                     "run_count": int(row["run_count"]),
                 }
@@ -383,7 +394,8 @@ class DataManager:
         ) | self.experiments_df["project_id"].astype("string").str.lower().str.contains(
             q, na=False
         )
-        experiments = self.experiments_df.loc[e_mask].head(10).to_dict("records")
+        experiments = self.experiments_df.loc[e_mask].head(
+            10).to_dict("records")
 
         # Trials: by status string (pending/running/finished/failed)
         t_mask = (
