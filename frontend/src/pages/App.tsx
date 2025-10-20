@@ -16,7 +16,7 @@ function App() {
     ];
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen">
             {/* Sidebar */}
             <div className={`${sidebarOpen ? 'w-64' : 'w-16'} transition-all duration-300 bg-white shadow-lg`}>
                 <div className="flex flex-col h-full">
