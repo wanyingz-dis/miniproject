@@ -46,11 +46,7 @@ class ExperimentService:
             sort_order=sort_order,
         )
 
-        # Enrich with computed fields
-        for exp in experiments:
-            exp["total_trials"] = int(exp.get("trial_count", 0))
-            exp["total_cost"] = float(exp.get("costs", 0))
-            exp["avg_accuracy"] = exp.get("accuracy")
+        
 
         return experiments, total
 

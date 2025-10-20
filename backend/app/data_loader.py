@@ -183,9 +183,20 @@ class DataManager:
                 total_trials=("id", "count"),
                 total_runs=("run_count", "sum"),
             )
+
+            # DEBUG: Print the aggregated data
+            logger.info("=== DEBUG: Experiment aggregations ===")
+            logger.info(f"exp_agg_from_trials:\n{exp_agg_from_trials}")
+
             self.experiments_df = self.experiments_df.merge(
                 exp_agg_from_trials, left_on="id", right_on="experiment_id", how="left"
             ).drop(columns=["experiment_id"], errors="ignore")
+
+            # DEBUG: Print experiments_df columns after merge
+            logger.info(
+                f"experiments_df columns after merge: {self.experiments_df.columns.tolist()}")
+            logger.info(
+                f"experiments_df sample:\n{self.experiments_df[['id', 'name', 'total_cost', 'total_trials', 'total_runs']].head()}")
 
             self.experiments_df[
                 ["avg_accuracy", "total_cost", "total_trials", "total_runs"]
@@ -200,8 +211,11 @@ class DataManager:
                 }
             )
 
-    # ---- queries -----------------------------------------------------------
+            # DEBUG: Print after fillna
+            logger.info(
+                f"experiments_df after fillna:\n{self.experiments_df[['id', 'name', 'total_cost', 'total_trials', 'total_runs']].head()}")
 
+    # ---- queries -----------------------------------------------------------
     def get_experiments(
         self,
         offset: int = 0,
@@ -216,6 +230,11 @@ class DataManager:
         # Filter out deleted experiments
         if "is_deleted" in df.columns:
             df = df[df["is_deleted"] == False]
+
+        logger.info(f"=== DEBUG: get_experiments after filter ===")
+        logger.info(f"Columns: {df.columns.tolist()}")
+        logger.info(
+            f"Sample data:\n{df[['id', 'name', 'total_cost', 'total_trials', 'total_runs']].head()}")
 
         # Filters
         if filters:
@@ -236,7 +255,20 @@ class DataManager:
         # Page
         total = len(df)
         df = df.iloc[offset: offset + limit]
-        return df.to_dict("records"), total
+
+        # Convert to dict and handle NaN values
+        experiments = df.to_dict("records")
+        for exp in experiments:
+            # Replace any NaN with None for JSON serialization
+            for key, value in list(exp.items()):
+                if pd.isna(value):
+                    exp[key] = None
+        # DEBUG
+        logger.info(f"=== DEBUG: Final experiments data ===")
+        logger.info(
+            f"First experiment: {experiments[0] if experiments else 'empty'}")
+
+        return experiments, total
 
     def get_experiment_by_id(self, experiment_id: int) -> Optional[Dict]:
         """Fetch a single experiment by ID."""
