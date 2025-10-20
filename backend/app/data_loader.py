@@ -49,8 +49,7 @@ def _parse_dt(
         s = pd.to_datetime(series, format=fmt, errors="coerce")
         # If many NaT, try a best-effort parse as a fallback
         if s.isna().mean() > 0.5:
-            s = pd.to_datetime(series, errors="coerce",
-                               dayfirst=bool(dayfirst))
+            s = pd.to_datetime(series, errors="coerce", dayfirst=bool(dayfirst))
         return s
     return pd.to_datetime(series, errors="coerce", dayfirst=bool(dayfirst))
 
@@ -92,12 +91,10 @@ class DataManager:
                 "is_del": "is_deleted",
             }
             exp = exp.rename(
-                columns={k: v for k, v in rename_map.items()
-                         if k in exp.columns}
+                columns={k: v for k, v in rename_map.items() if k in exp.columns}
             )
             if "is_deleted" in exp.columns:
-                exp["is_deleted"] = exp["is_deleted"].fillna(
-                    False).astype(bool)
+                exp["is_deleted"] = exp["is_deleted"].fillna(False).astype(bool)
 
             exp = _normalize_df(exp)
 
@@ -165,12 +162,11 @@ class DataManager:
             ).drop(columns=["trial_id"], errors="ignore")
 
             # Fill NA after the merge (trials with zero runs)
-            self.trials_df["total_cost"] = self.trials_df["total_cost"].fillna(
-                0.0)
-            self.trials_df["total_tokens"] = self.trials_df["total_tokens"].fillna(
-                0)
+            self.trials_df["total_cost"] = self.trials_df["total_cost"].fillna(0.0)
+            self.trials_df["total_tokens"] = self.trials_df["total_tokens"].fillna(0)
             self.trials_df["avg_latency_ms"] = self.trials_df["avg_latency_ms"].fillna(
-                0.0)
+                0.0
+            )
             self.trials_df["run_count"] = self.trials_df["run_count"].fillna(0)
 
         if self.trials_df is not None and self.experiments_df is not None:
@@ -194,9 +190,11 @@ class DataManager:
 
             # DEBUG: Print experiments_df columns after merge
             logger.info(
-                f"experiments_df columns after merge: {self.experiments_df.columns.tolist()}")
+                f"experiments_df columns after merge: {self.experiments_df.columns.tolist()}"
+            )
             logger.info(
-                f"experiments_df sample:\n{self.experiments_df[['id', 'name', 'total_cost', 'total_trials', 'total_runs']].head()}")
+                f"experiments_df sample:\n{self.experiments_df[['id', 'name', 'total_cost', 'total_trials', 'total_runs']].head()}"
+            )
 
             self.experiments_df[
                 ["avg_accuracy", "total_cost", "total_trials", "total_runs"]
@@ -213,7 +211,8 @@ class DataManager:
 
             # DEBUG: Print after fillna
             logger.info(
-                f"experiments_df after fillna:\n{self.experiments_df[['id', 'name', 'total_cost', 'total_trials', 'total_runs']].head()}")
+                f"experiments_df after fillna:\n{self.experiments_df[['id', 'name', 'total_cost', 'total_trials', 'total_runs']].head()}"
+            )
 
     # ---- queries -----------------------------------------------------------
     def get_experiments(
@@ -234,13 +233,13 @@ class DataManager:
         logger.info(f"=== DEBUG: get_experiments after filter ===")
         logger.info(f"Columns: {df.columns.tolist()}")
         logger.info(
-            f"Sample data:\n{df[['id', 'name', 'total_cost', 'total_trials', 'total_runs']].head()}")
+            f"Sample data:\n{df[['id', 'name', 'total_cost', 'total_trials', 'total_runs']].head()}"
+        )
 
         # Filters
         if filters:
             if filters.get("name"):
-                df = df[df["name"].str.contains(
-                    filters["name"], case=False, na=False)]
+                df = df[df["name"].str.contains(filters["name"], case=False, na=False)]
             if filters.get("project_id"):
                 df = df[df["project_id"] == filters["project_id"]]
             if filters.get("created_after") is not None:
@@ -254,7 +253,7 @@ class DataManager:
 
         # Page
         total = len(df)
-        df = df.iloc[offset: offset + limit]
+        df = df.iloc[offset : offset + limit]
 
         # Convert to dict and handle NaN values
         experiments = df.to_dict("records")
@@ -265,8 +264,7 @@ class DataManager:
                     exp[key] = None
         # DEBUG
         logger.info(f"=== DEBUG: Final experiments data ===")
-        logger.info(
-            f"First experiment: {experiments[0] if experiments else 'empty'}")
+        logger.info(f"First experiment: {experiments[0] if experiments else 'empty'}")
 
         return experiments, total
 
@@ -278,10 +276,11 @@ class DataManager:
             return row.iloc[0].to_dict()
         return None
 
-    def get_trials_by_experiment(self, experiment_id: int, status_filter: Optional[str] = None) -> List[Dict]:
+    def get_trials_by_experiment(
+        self, experiment_id: int, status_filter: Optional[str] = None
+    ) -> List[Dict]:
         """All trials for an experiment (optionally filter by status)."""
-        df = self.trials_df[self.trials_df["experiment_id"]
-                            == experiment_id].copy()
+        df = self.trials_df[self.trials_df["experiment_id"] == experiment_id].copy()
         if status_filter:
             df = df[df["status"] == status_filter.lower()]
         df = df.sort_values("created_at")
@@ -323,19 +322,22 @@ class DataManager:
     def get_dashboard_stats(self) -> Dict[str, Any]:
         """High-level KPIs used by the dashboard. Cached for speed."""
         # Filter out deleted experiments
-        active_experiments = self.experiments_df[self.experiments_df["is_deleted"] ==
-                                                 False] if "is_deleted" in self.experiments_df.columns else self.experiments_df
+        active_experiments = (
+            self.experiments_df[self.experiments_df["is_deleted"] == False]
+            if "is_deleted" in self.experiments_df.columns
+            else self.experiments_df
+        )
         active_experiment_ids = active_experiments["id"].tolist()
 
         total_experiments = int(len(active_experiments))
 
         # Only count trials and runs from active experiments
-        active_trials = self.trials_df[self.trials_df["experiment_id"].isin(
-            active_experiment_ids)]
+        active_trials = self.trials_df[
+            self.trials_df["experiment_id"].isin(active_experiment_ids)
+        ]
         total_trials = int(len(active_trials))
 
-        active_runs = self.runs_df[self.runs_df["trial_id"].isin(
-            active_trials["id"])]
+        active_runs = self.runs_df[self.runs_df["trial_id"].isin(active_trials["id"])]
         total_runs = int(len(active_runs))
 
         # Total cost from active runs only
@@ -343,8 +345,7 @@ class DataManager:
 
         # Accuracy is defined on finished trials only (from active experiments)
         finished_mask = active_trials["status"] == TrialStatus.FINISHED.value
-        avg_accuracy = float(
-            active_trials.loc[finished_mask, "accuracy"].mean())
+        avg_accuracy = float(active_trials.loc[finished_mask, "accuracy"].mean())
 
         avg_latency_ms = float(active_runs["latency_ms"].mean())
 
@@ -353,9 +354,7 @@ class DataManager:
             .isin([TrialStatus.PENDING.value, TrialStatus.RUNNING.value])
             .sum()
         )
-        failed_trials = int(
-            (active_trials["status"] == TrialStatus.FAILED.value).sum()
-        )
+        failed_trials = int((active_trials["status"] == TrialStatus.FAILED.value).sum())
 
         success_rate = float(
             (active_trials["status"] == TrialStatus.FINISHED.value).sum()
@@ -380,13 +379,17 @@ class DataManager:
     def get_cost_by_experiment(self) -> List[Dict]:
         """Cost breakdown by experiment (sum of runs, via trial rollup)."""
         # Filter out deleted experiments
-        active_experiments = self.experiments_df[self.experiments_df["is_deleted"] ==
-                                                 False] if "is_deleted" in self.experiments_df.columns else self.experiments_df
+        active_experiments = (
+            self.experiments_df[self.experiments_df["is_deleted"] == False]
+            if "is_deleted" in self.experiments_df.columns
+            else self.experiments_df
+        )
         active_experiment_ids = active_experiments["id"].tolist()
 
         # Only include trials from active experiments
-        active_trials = self.trials_df[self.trials_df["experiment_id"].isin(
-            active_experiment_ids)]
+        active_trials = self.trials_df[
+            self.trials_df["experiment_id"].isin(active_experiment_ids)
+        ]
 
         # trials already contains total_cost and run_count from _precompute_aggregations
         merged = active_trials.merge(
@@ -411,8 +414,7 @@ class DataManager:
                     "experiment_name": row["name"],
                     "total_cost": cost,
                     "percentage": (
-                        float(cost / total_cost *
-                              100.0) if total_cost > 0 else 0.0
+                        float(cost / total_cost * 100.0) if total_cost > 0 else 0.0
                     ),
                     "run_count": int(row["run_count"]),
                 }
@@ -470,8 +472,7 @@ class DataManager:
         ) | self.experiments_df["project_id"].astype("string").str.lower().str.contains(
             q, na=False
         )
-        experiments = self.experiments_df.loc[e_mask].head(
-            10).to_dict("records")
+        experiments = self.experiments_df.loc[e_mask].head(10).to_dict("records")
 
         # Trials: by status string (pending/running/finished/failed)
         t_mask = (
