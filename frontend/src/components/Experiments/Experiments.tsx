@@ -109,6 +109,7 @@ export default function Experiments() {
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
+                            {/* Name column - clickable header for sorting */}
                             <th
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                 onClick={() => handleSort('name')}
@@ -124,6 +125,7 @@ export default function Experiments() {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Runs
                             </th>
+                            {/* Cost column - clickable header for sorting */}
                             <th
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                 onClick={() => handleSort('total_cost')}
@@ -133,24 +135,27 @@ export default function Experiments() {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Accuracy
                             </th>
+                            {/* Created Date column - clickable header for sorting */}
                             <th
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                 onClick={() => handleSort('created_at')}
                             >
                                 Created {sortBy === 'created_at' && (sortOrder === 'asc' ? '↑' : '↓')}
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
-                            </th>
+                            {/* REMOVED: Actions column - no longer needed since name is clickable */}
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {data?.items.map((experiment: Experiment) => (
                             <tr key={experiment.id} className="hover:bg-gray-50">
+                                {/* MODIFIED: Name is now a clickable link to experiment details */}
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-900">
+                                    <Link
+                                        to={`/experiments/${experiment.id}`}
+                                        className="text-sm font-medium text-primary-600 hover:text-primary-900"
+                                    >
                                         {experiment.name}
-                                    </div>
+                                    </Link>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm text-gray-500">{experiment.project_id}</div>
@@ -178,14 +183,7 @@ export default function Experiments() {
                                         {format(new Date(experiment.created_at), 'MMM d, yyyy')}
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <Link
-                                        to={`/experiments/${experiment.id}`}
-                                        className="text-primary-600 hover:text-primary-900"
-                                    >
-                                        View Details →
-                                    </Link>
-                                </td>
+                                {/* REMOVED: "View Details →" link - redundant since name is now clickable */}
                             </tr>
                         ))}
                     </tbody>
