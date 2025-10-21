@@ -58,8 +58,10 @@ class ExperimentService:
         # Add computed fields
         trials = data_manager.get_trials_by_experiment(experiment_id)
         exp["total_trials"] = len(trials)
-        exp["finished_trials"] = len([t for t in trials if t["status"] == "finished"])
-        exp["failed_trials"] = len([t for t in trials if t["status"] == "failed"])
+        exp["finished_trials"] = len(
+            [t for t in trials if t["status"] == "finished"])
+        exp["failed_trials"] = len(
+            [t for t in trials if t["status"] == "failed"])
 
         import pandas as pd
 
@@ -148,7 +150,8 @@ class TrialService:
         if runs:
             trial["total_runs"] = len(runs)
             trial["total_cost"] = sum(r["costs"] for r in runs)
-            trial["avg_latency"] = sum(r["latency_ms"] for r in runs) / len(runs)
+            trial["avg_latency"] = sum(r["latency_ms"]
+                                       for r in runs) / len(runs)
             trial["total_tokens"] = sum(r["tokens"] for r in runs)
 
         return trial
@@ -180,15 +183,23 @@ class MetricsService:
     @staticmethod
     def get_performance_metrics() -> Dict:
         """Get various performance metrics"""
+        # ✅ MODIFIED: Filter to only use runs from valid trials
+        valid_trial_ids = data_manager.trials_df[
+            data_manager.trials_df['is_valid'] == True
+        ]['id'].tolist()
+
+        valid_runs = data_manager.runs_df[
+            data_manager.runs_df['trial_id'].isin(valid_trial_ids)
+        ]
+
         return {
-            "avg_tokens_per_run": float(data_manager.runs_df["tokens"].mean()),
-            "median_latency": float(data_manager.runs_df["latency_ms"].median()),
-            "p95_latency": float(data_manager.runs_df["latency_ms"].quantile(0.95)),
+            "avg_tokens_per_run": float(valid_runs["tokens"].mean()),
+            "median_latency": float(valid_runs["latency_ms"].median()),
+            "p95_latency": float(valid_runs["latency_ms"].quantile(0.95)),
             "cost_per_token": float(
-                data_manager.runs_df["costs"].sum()
-                / data_manager.runs_df["tokens"].sum()
+                valid_runs["costs"].sum() / valid_runs["tokens"].sum()
             ),
-            "hourly_run_rate": len(data_manager.runs_df) / 24,  # Simplified
+            "hourly_run_rate": len(valid_runs) / 24,  # Simplified
         }
 
     @staticmethod
@@ -246,11 +257,18 @@ class AnalyticsService:
         """Detect cost or performance anomalies"""
         anomalies = []
 
-        # Detect high-cost runs
-        cost_threshold = data_manager.runs_df["costs"].quantile(0.95)
-        high_cost_runs = data_manager.runs_df[
-            data_manager.runs_df["costs"] > cost_threshold
+        # changed: Only analyze runs from valid trials
+        valid_trial_ids = data_manager.trials_df[
+            data_manager.trials_df['is_valid'] == True
+        ]['id'].tolist()
+
+        valid_runs = data_manager.runs_df[
+            data_manager.runs_df['trial_id'].isin(valid_trial_ids)
         ]
+
+        # Detect high-cost runs
+        cost_threshold = valid_runs["costs"].quantile(0.95)
+        high_cost_runs = valid_runs[valid_runs["costs"] > cost_threshold]
 
         for _, run in high_cost_runs.iterrows():
             anomalies.append(
@@ -263,9 +281,13 @@ class AnalyticsService:
                 }
             )
 
-        # Detect failed trials pattern
+        # changed: Detect failed trials pattern (only for valid trials)
+        valid_trials = data_manager.trials_df[
+            data_manager.trials_df['is_valid'] == True
+        ]
+
         failed_by_exp = (
-            data_manager.trials_df[data_manager.trials_df["status"] == "failed"]
+            valid_trials[valid_trials["status"] == "failed"]
             .groupby("experiment_id")
             .size()
         )
@@ -286,14 +308,19 @@ class AnalyticsService:
     @staticmethod
     def get_trends() -> Dict:
         """Calculate trends and insights"""
-        # Calculate accuracy trend
-        finished_trials = data_manager.trials_df[
-            data_manager.trials_df["status"] == "finished"
+        # changed: Calculate accuracy trend (only for valid trials)
+        valid_trials = data_manager.trials_df[
+            data_manager.trials_df['is_valid'] == True
+        ]
+
+        finished_trials = valid_trials[
+            valid_trials["status"] == "finished"
         ].sort_values("created_at")
 
         # Rolling mean for accuracy
         if len(finished_trials) > 5:
-            accuracy_trend = finished_trials["accuracy"].rolling(window=5).mean()
+            accuracy_trend = finished_trials["accuracy"].rolling(
+                window=5).mean()
             improving = (
                 accuracy_trend.iloc[-1] > accuracy_trend.iloc[-5]
                 if len(accuracy_trend) >= 5
@@ -317,8 +344,8 @@ class AnalyticsService:
             "accuracy_improving": improving,
             "cost_trend": cost_trend,
             "avg_trial_duration": (
-                float(data_manager.trials_df["duration_seconds"].mean())
-                if "duration_seconds" in data_manager.trials_df.columns
+                float(valid_trials["duration_seconds"].mean())
+                if "duration_seconds" in valid_trials.columns
                 else None
             ),
             # experiments per day
