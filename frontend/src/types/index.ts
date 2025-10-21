@@ -67,3 +67,28 @@ export type AccuracyPoint = {
     accuracy: number;  // 0..1
     status: "pending" | "running" | "finished" | "failed";
 };
+
+
+// ---- Chat Types ----
+export type ChatMessage = {
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    timestamp: Date;
+};
+
+export type ChatRequest = {
+    message: string;
+    context: {
+        experiments?: Experiment[];
+        trials?: Trial[];
+        runs?: Run[];
+        [key: string]: any;
+    };
+};
+
+export type ChatResponse = {
+    response: string;
+    context_used: string[];
+    relevant_experiments: string[];
+};

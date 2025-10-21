@@ -4,11 +4,16 @@ import Dashboard from '../components/Dashboard/Dashboard';
 import Experiments from '../components/Experiments/Experiments';
 import ExperimentDetail from '../components/Experiments/ExperimentDetail';
 import TrialDetail from '../components/Trials/TrialDetail';
-
+import { ChatButton } from '../components/Chat/ChatButton';
+import { ChatModal } from '../components/Chat/ChatModal';
+import { useChat } from '../hooks/useChat';
 
 function App() {
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(true);
+
+    // Chat functionality
+    const { messages, isOpen, isLoading, sendMessage, clearMessages, toggleChat } = useChat();
 
     const navigation = [
         { name: 'Dashboard', href: '/', icon: ' ' },
@@ -57,7 +62,7 @@ function App() {
                     <div className="p-4 border-t">
                         {sidebarOpen && (
                             <div className="text-sm text-gray-500">
-                                <p>Version 0.1.0</p>
+                                <p>Version 1.1.0</p>
                                 <p className="mt-1">© 2025 LLM Observatory</p>
                             </div>
                         )}
@@ -74,6 +79,17 @@ function App() {
                     <Route path="/trials/:id" element={<TrialDetail />} />
                 </Routes>
             </div>
+
+            {/* Chat Feature */}
+            <ChatButton onClick={toggleChat} isOpen={isOpen} />
+            {isOpen && (
+                <ChatModal
+                    messages={messages}
+                    isLoading={isLoading}
+                    onSendMessage={(message) => sendMessage(message, {})}
+                    onClear={clearMessages}
+                />
+            )}
         </div>
     );
 }

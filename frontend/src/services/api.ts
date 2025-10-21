@@ -6,6 +6,8 @@ import type {
     Experiment,
     Trial,
     AccuracyPoint,
+    ChatRequest,
+    ChatResponse,
 } from "../types";
 
 const api = axios.create({
@@ -76,6 +78,15 @@ export default {
         const { data } = await api.get(`/trials/${id}`);
         return data;
     },
+
+    // New: add the chat function
+    async sendChatMessage(request: ChatRequest): Promise<ChatResponse> {
+        const { data } = await api.post<ChatResponse>("/chat", request);
+        return data;
+    },
+
+
+
 };
 
 export type { Experiment };
