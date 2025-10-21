@@ -114,3 +114,23 @@ The chatbot integration requires a valid DeepInfra API key. If the chatbot is no
 
 ### Docker API Documentation
 When running with Docker, the backend API documentation may not be accessible at `http://localhost:8000/docs`. 
+
+
+## Screenshots
+
+> All images live in `docs/assets/`.
+
+### Dashboard
+![Dashboard](docs/assets/dashboard.png)
+
+### Experiments Page
+![Experiments](docs/assets/experiment.png)
+
+### Trial Detail
+![Trial Detail](docs/assets/trial.png)
+
+### Pending/Failed Handling (Exp-3)
+![Exp-3](docs/assets/exp3.png)
+
+### Chatbot
+![Chatbot](docs/assets/chatbot.png)
