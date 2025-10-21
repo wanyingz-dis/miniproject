@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useState, useMemo } from 'react';
 import apiService from '../../services/api';
 import AccuracyCurve from '../Visualizations/AccuracyCurve';
 import { format } from 'date-fns';
@@ -7,6 +8,13 @@ import { format } from 'date-fns';
 export default function ExperimentDetail() {
     const { id } = useParams<{ id: string }>();
     const experimentId = parseInt(id || '0');
+
+    //  NEW: Filter states
+    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [minAccuracy, setMinAccuracy] = useState<number>(0);
+    const [searchId, setSearchId] = useState<string>('');
+    const [sortBy, setSortBy] = useState<string>('created_at');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     const { data: experiment } = useQuery({
         queryKey: ['experiment', experimentId],
@@ -25,6 +33,66 @@ export default function ExperimentDetail() {
         queryFn: () => apiService.getAccuracyCurve(experimentId),
         enabled: !!experimentId,
     });
+
+    //  NEW: Filter and sort trials
+    const filteredTrials = useMemo(() => {
+        if (!trialsData?.trials) return [];
+
+        let filtered = [...trialsData.trials];
+
+        // Filter by status
+        if (statusFilter !== 'all') {
+            filtered = filtered.filter(t => t.status === statusFilter);
+        }
+
+        // Filter by accuracy
+        if (minAccuracy > 0) {
+            filtered = filtered.filter(t => {
+                if (!t.accuracy) return false;
+                return (t.accuracy * 100) >= minAccuracy;
+            });
+        }
+
+        // Filter by trial ID search
+        if (searchId) {
+            filtered = filtered.filter(t =>
+                t.id.toString().includes(searchId)
+            );
+        }
+
+        // Sort
+        filtered.sort((a, b) => {
+            let aVal: any = a[sortBy as keyof typeof a];
+            let bVal: any = b[sortBy as keyof typeof b];
+
+            // Handle null/undefined
+            if (aVal === null || aVal === undefined) return 1;
+            if (bVal === null || bVal === undefined) return -1;
+
+            // Convert dates to timestamps for comparison
+            if (sortBy === 'created_at') {
+                aVal = new Date(aVal).getTime();
+                bVal = new Date(bVal).getTime();
+            }
+
+            if (sortOrder === 'asc') {
+                return aVal > bVal ? 1 : -1;
+            } else {
+                return aVal < bVal ? 1 : -1;
+            }
+        });
+
+        return filtered;
+    }, [trialsData, statusFilter, minAccuracy, searchId, sortBy, sortOrder]);
+
+    // NEW: Reset filters function
+    const resetFilters = () => {
+        setStatusFilter('all');
+        setMinAccuracy(0);
+        setSearchId('');
+        setSortBy('created_at');
+        setSortOrder('desc');
+    };
 
     const StatusBadge = ({ status }: { status: string }) => {
         const colors: Record<string, string> = {
@@ -131,6 +199,100 @@ export default function ExperimentDetail() {
                 </div>
             )}
 
+            {/*  NEW: Filter Bar */}
+            <div className="bg-white rounded-lg shadow p-4 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-medium text-gray-700">Filter Trials</h3>
+                    <button
+                        onClick={resetFilters}
+                        className="text-xs text-primary-600 hover:text-primary-800 font-medium"
+                    >
+                        Reset All
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {/* Status Filter */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Status
+                        </label>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                            <option value="all">All Statuses</option>
+                            <option value="finished">Finished</option>
+                            <option value="running">Running</option>
+                            <option value="pending">Pending</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+
+                    {/* Accuracy Filter */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Min Accuracy: {minAccuracy}%
+                        </label>
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="5"
+                            value={minAccuracy}
+                            onChange={(e) => setMinAccuracy(parseInt(e.target.value))}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                        />
+                    </div>
+
+                    {/* Search by ID */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Search Trial ID
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="e.g., 1, 2, 10"
+                            value={searchId}
+                            onChange={(e) => setSearchId(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                    </div>
+
+                    {/* Sort By */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Sort By
+                        </label>
+                        <div className="flex gap-2">
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            >
+                                <option value="created_at">Created</option>
+                                <option value="accuracy">Accuracy</option>
+                                <option value="total_cost">Cost</option>
+                                <option value="duration_seconds">Duration</option>
+                            </select>
+                            <button
+                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                            >
+                                {sortOrder === 'asc' ? '↑' : '↓'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/*  NEW: Results count */}
+                <div className="mt-3 text-xs text-gray-500">
+                    Showing {filteredTrials.length} of {trialsData.trials.length} trials
+                </div>
+            </div>
+
             {/* Trials Table */}
             <div className="bg-white rounded-lg shadow">
                 <div className="px-6 py-4 border-b">
@@ -163,36 +325,45 @@ export default function ExperimentDetail() {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {trialsData.trials.map((trial) => (
-                            <tr key={trial.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    <Link
-                                        to={`/trials/${trial.id}`}
-                                        className="text-primary-600 hover:text-primary-900"
-                                    >
-                                        #{trial.id}
-                                    </Link>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <StatusBadge status={trial.status} />
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {trial.accuracy ? `${(trial.accuracy * 100).toFixed(1)}%` : '-'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {trial.duration_seconds ? `${trial.duration_seconds}s` : '-'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {trial.total_runs || 0}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    ${trial.total_cost?.toFixed(2) || '0.00'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {formatDate(trial.created_at, 'MMM d, HH:mm')}
+                        {/* MODIFIED: Use filteredTrials instead of trialsData.trials */}
+                        {filteredTrials.length > 0 ? (
+                            filteredTrials.map((trial) => (
+                                <tr key={trial.id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <Link
+                                            to={`/trials/${trial.id}`}
+                                            className="text-primary-600 hover:text-primary-900"
+                                        >
+                                            #{trial.id}
+                                        </Link>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <StatusBadge status={trial.status} />
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {trial.accuracy ? `${(trial.accuracy * 100).toFixed(1)}%` : '-'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {trial.duration_seconds ? `${trial.duration_seconds}s` : '-'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {trial.total_runs || 0}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        ${trial.total_cost?.toFixed(2) || '0.00'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {formatDate(trial.created_at, 'MMM d, HH:mm')}
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500">
+                                    No trials match the current filters
                                 </td>
                             </tr>
-                        ))}
+                        )}
                     </tbody>
                 </table>
             </div>

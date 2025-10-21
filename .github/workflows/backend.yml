@@ -28,8 +28,6 @@ jobs:
       - name: Ruff (lint)
         run: ruff check .
 
-      - name: Black (auto format)
-        run: black .
 
   smoke:
     runs-on: ubuntu-latest
