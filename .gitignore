@@ -111,3 +111,7 @@ frontend/.env.*.local
 
 
 .env
+
+
+backend/data/*
+!backend/data/.gitkeep
