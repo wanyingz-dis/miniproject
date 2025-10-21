@@ -28,6 +28,10 @@ export default function TrialDetail() {
         enabled: !!trialId,
     });
 
+
+
+    
+
     // Process runs with search and filters 
     const processedRuns = useMemo(() => {
         if (!runsData?.runs) return [];
