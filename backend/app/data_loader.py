@@ -49,8 +49,7 @@ def _parse_dt(
         s = pd.to_datetime(series, format=fmt, errors="coerce")
         # If many NaT, try a best-effort parse as a fallback
         if s.isna().mean() > 0.5:
-            s = pd.to_datetime(series, errors="coerce",
-                               dayfirst=bool(dayfirst))
+            s = pd.to_datetime(series, errors="coerce", dayfirst=bool(dayfirst))
         return s
     return pd.to_datetime(series, errors="coerce", dayfirst=bool(dayfirst))
 
@@ -72,17 +71,17 @@ def _validate_trial_data(row: pd.Series) -> bool:
     - Accuracy is out of range (not between 0 and 1)
     """
     # Check status is one of the valid values
-    valid_statuses = ['pending', 'running', 'finished', 'failed']
-    if pd.isna(row.get('status')) or row['status'] not in valid_statuses:
+    valid_statuses = ["pending", "running", "finished", "failed"]
+    if pd.isna(row.get("status")) or row["status"] not in valid_statuses:
         return False
 
     # Check created_at is a valid datetime (not NaT)
-    if pd.isna(row.get('created_at')):
+    if pd.isna(row.get("created_at")):
         return False
 
     # Check accuracy is in valid range (if present)
-    if pd.notna(row.get('accuracy')):
-        acc = row['accuracy']
+    if pd.notna(row.get("accuracy")):
+        acc = row["accuracy"]
         if not (0 <= acc <= 1):
             return False
 
@@ -121,12 +120,10 @@ class DataManager:
                 "is_del": "is_deleted",
             }
             exp = exp.rename(
-                columns={k: v for k, v in rename_map.items()
-                         if k in exp.columns}
+                columns={k: v for k, v in rename_map.items() if k in exp.columns}
             )
             if "is_deleted" in exp.columns:
-                exp["is_deleted"] = exp["is_deleted"].fillna(
-                    False).astype(bool)
+                exp["is_deleted"] = exp["is_deleted"].fillna(False).astype(bool)
 
             exp = _normalize_df(exp)
 
@@ -183,22 +180,25 @@ class DataManager:
 
         #  NEW: Mark invalid trials
         if self.trials_df is not None:
-            self.trials_df['is_valid'] = self.trials_df.apply(
-                _validate_trial_data, axis=1)
+            self.trials_df["is_valid"] = self.trials_df.apply(
+                _validate_trial_data, axis=1
+            )
 
-            invalid_count = (~self.trials_df['is_valid']).sum()
+            invalid_count = (~self.trials_df["is_valid"]).sum()
             if invalid_count > 0:
                 logger.warning(
-                    f"Found {invalid_count} invalid trials that will be excluded from calculations")
+                    f"Found {invalid_count} invalid trials that will be excluded from calculations"
+                )
                 # Log which trials are invalid
-                invalid_trials = self.trials_df[~self.trials_df['is_valid']][[
-                    'id', 'status', 'created_at']]
+                invalid_trials = self.trials_df[~self.trials_df["is_valid"]][
+                    ["id", "status", "created_at"]
+                ]
                 logger.info(f"Invalid trials:\n{invalid_trials}")
 
         # changed: Filter out invalid trials for aggregations
         if self.runs_df is not None and self.trials_df is not None:
             # Use only VALID trials for aggregations
-            valid_trials = self.trials_df[self.trials_df['is_valid'] == True]
+            valid_trials = self.trials_df[self.trials_df["is_valid"] == True]
 
             # Aggregate runs at the trial level (only for valid trials)
             runs_agg = self.runs_df.groupby("trial_id", as_index=False).agg(
@@ -214,10 +214,8 @@ class DataManager:
             ).drop(columns=["trial_id"], errors="ignore")
 
             # Fill NA after the merge (trials with zero runs)
-            self.trials_df["total_cost"] = self.trials_df["total_cost"].fillna(
-                0.0)
-            self.trials_df["total_tokens"] = self.trials_df["total_tokens"].fillna(
-                0)
+            self.trials_df["total_cost"] = self.trials_df["total_cost"].fillna(0.0)
+            self.trials_df["total_tokens"] = self.trials_df["total_tokens"].fillna(0)
             self.trials_df["avg_latency_ms"] = self.trials_df["avg_latency_ms"].fillna(
                 0.0
             )
@@ -226,7 +224,7 @@ class DataManager:
         # changed: Only aggregate VALID trials to experiments
         if self.trials_df is not None and self.experiments_df is not None:
             # Filter to valid trials only
-            valid_trials = self.trials_df[self.trials_df['is_valid'] == True]
+            valid_trials = self.trials_df[self.trials_df["is_valid"] == True]
 
             # Aggregate trials at the experiment level (ONLY VALID TRIALS)
             exp_agg_from_trials = valid_trials.groupby(
@@ -297,8 +295,7 @@ class DataManager:
         # Filters
         if filters:
             if filters.get("name"):
-                df = df[df["name"].str.contains(
-                    filters["name"], case=False, na=False)]
+                df = df[df["name"].str.contains(filters["name"], case=False, na=False)]
             if filters.get("project_id"):
                 df = df[df["project_id"] == filters["project_id"]]
             if filters.get("created_after") is not None:
@@ -312,7 +309,7 @@ class DataManager:
 
         # Page
         total = len(df)
-        df = df.iloc[offset: offset + limit]
+        df = df.iloc[offset : offset + limit]
 
         # Convert to dict and handle NaN values
         experiments = df.to_dict("records")
@@ -323,8 +320,7 @@ class DataManager:
                     exp[key] = None
         # DEBUG
         logger.info(f"=== DEBUG: Final experiments data ===")
-        logger.info(
-            f"First experiment: {experiments[0] if experiments else 'empty'}")
+        logger.info(f"First experiment: {experiments[0] if experiments else 'empty'}")
 
         return experiments, total
 
@@ -340,8 +336,7 @@ class DataManager:
         self, experiment_id: int, status_filter: Optional[str] = None
     ) -> List[Dict]:
         """All trials for an experiment (optionally filter by status)."""
-        df = self.trials_df[self.trials_df["experiment_id"]
-                            == experiment_id].copy()
+        df = self.trials_df[self.trials_df["experiment_id"] == experiment_id].copy()
         if status_filter:
             df = df[df["status"] == status_filter.lower()]
         df = df.sort_values("created_at")
@@ -394,13 +389,12 @@ class DataManager:
 
         # Changed: Only count VALID trials from active experiments
         active_trials = self.trials_df[
-            (self.trials_df["experiment_id"].isin(active_experiment_ids)) &
-            (self.trials_df["is_valid"] == True)
+            (self.trials_df["experiment_id"].isin(active_experiment_ids))
+            & (self.trials_df["is_valid"] == True)
         ]
         total_trials = int(len(active_trials))
 
-        active_runs = self.runs_df[self.runs_df["trial_id"].isin(
-            active_trials["id"])]
+        active_runs = self.runs_df[self.runs_df["trial_id"].isin(active_trials["id"])]
         total_runs = int(len(active_runs))
 
         # Total cost from active runs only
@@ -408,8 +402,7 @@ class DataManager:
 
         # Accuracy is defined on finished trials only (from active experiments)
         finished_mask = active_trials["status"] == TrialStatus.FINISHED.value
-        avg_accuracy = float(
-            active_trials.loc[finished_mask, "accuracy"].mean())
+        avg_accuracy = float(active_trials.loc[finished_mask, "accuracy"].mean())
 
         avg_latency_ms = float(active_runs["latency_ms"].mean())
 
@@ -418,8 +411,7 @@ class DataManager:
             .isin([TrialStatus.PENDING.value, TrialStatus.RUNNING.value])
             .sum()
         )
-        failed_trials = int(
-            (active_trials["status"] == TrialStatus.FAILED.value).sum())
+        failed_trials = int((active_trials["status"] == TrialStatus.FAILED.value).sum())
 
         success_rate = float(
             (active_trials["status"] == TrialStatus.FINISHED.value).sum()
@@ -453,8 +445,8 @@ class DataManager:
 
         # Changed: Only include VALID trials from active experiments
         active_trials = self.trials_df[
-            (self.trials_df["experiment_id"].isin(active_experiment_ids)) &
-            (self.trials_df["is_valid"] == True)
+            (self.trials_df["experiment_id"].isin(active_experiment_ids))
+            & (self.trials_df["is_valid"] == True)
         ]
 
         # trials already contains total_cost and run_count from _precompute_aggregations
@@ -480,8 +472,7 @@ class DataManager:
                     "experiment_name": row["name"],
                     "total_cost": cost,
                     "percentage": (
-                        float(cost / total_cost *
-                              100.0) if total_cost > 0 else 0.0
+                        float(cost / total_cost * 100.0) if total_cost > 0 else 0.0
                     ),
                     "run_count": int(row["run_count"]),
                 }
@@ -539,8 +530,7 @@ class DataManager:
         ) | self.experiments_df["project_id"].astype("string").str.lower().str.contains(
             q, na=False
         )
-        experiments = self.experiments_df.loc[e_mask].head(
-            10).to_dict("records")
+        experiments = self.experiments_df.loc[e_mask].head(10).to_dict("records")
 
         # Trials: by status string (pending/running/finished/failed)
         t_mask = (

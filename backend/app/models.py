@@ -174,14 +174,16 @@ class RunFilter(BaseModel):
 class ChatRequest(BaseModel):
     """Chat request for experiment analysis using DeepInfra LLM"""
 
-    message: str = Field(..., min_length=1,
-                         description="User's question about experiments")
+    message: str = Field(
+        ..., min_length=1, description="User's question about experiments"
+    )
     context: dict = Field(
         default_factory=dict,
-        description="Experiment data context (experiments, trials, runs)"
+        description="Experiment data context (experiments, trials, runs)",
     )
     experiment_id: Optional[int] = Field(
-        None, description="Focus on specific experiment")
+        None, description="Focus on specific experiment"
+    )
 
 
 class ChatResponse(BaseModel):
@@ -189,10 +191,8 @@ class ChatResponse(BaseModel):
 
     response: str = Field(..., description="AI-generated analysis response")
     context_used: List[str] = Field(
-        default_factory=list,
-        description="List of context keys used in analysis"
+        default_factory=list, description="List of context keys used in analysis"
     )
     relevant_experiments: List[str] = Field(
-        default_factory=list,
-        description="List of relevant experiment IDs mentioned"
+        default_factory=list, description="List of relevant experiment IDs mentioned"
     )

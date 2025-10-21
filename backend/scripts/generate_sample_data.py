@@ -1,5 +1,5 @@
 """
-Generate sample CSV data for testing 
+Generate sample CSV data for testing
 """
 
 import pandas as pd

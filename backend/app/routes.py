@@ -80,8 +80,7 @@ async def get_experiment(experiment_id: int = Path(..., description="Experiment 
 @router.get("/experiments/{experiment_id}/trials")
 async def get_experiment_trials(
     experiment_id: int = Path(..., description="Experiment ID"),
-    status: Optional[str] = Query(
-        None, regex="^(pending|running|finished|failed)$"),
+    status: Optional[str] = Query(None, regex="^(pending|running|finished|failed)$"),
 ):
     """Get all trials for an experiment"""
     trials = ExperimentService.get_experiment_trials(experiment_id, status)
@@ -139,8 +138,7 @@ async def get_cost_breakdown():
 
 @router.get("/dashboard/daily-costs", response_model=List[DailyCost])
 async def get_daily_costs(
-    days: int = Query(30, ge=1, le=365,
-                      description="Number of days to retrieve")
+    days: int = Query(30, ge=1, le=365, description="Number of days to retrieve")
 ):
     """Get daily cost trends"""
     return MetricsService.get_daily_costs(days)
@@ -197,26 +195,45 @@ async def analyze_with_chat(request: ChatRequest):
     if not settings.enable_chatbot:
         raise HTTPException(
             status_code=503,
-            detail="Chatbot feature is not enabled. Set DEEPINFRA_API_KEY in .env file."
+            detail="Chatbot feature is not enabled. Set DEEPINFRA_API_KEY in .env file.",
         )
 
     # Filter: Only answer experiment-related questions
     experiment_keywords = [
-        'experiment', 'trial', 'run', 'accuracy', 'cost', 'performance',
-        'model', 'training', 'loss', 'metric', 'result', 'compare',
-        'why', 'how', 'what', 'which', 'best', 'worst', 'trend',
-        'show', 'analyze', 'summary', 'insight', 'data'
+        "experiment",
+        "trial",
+        "run",
+        "accuracy",
+        "cost",
+        "performance",
+        "model",
+        "training",
+        "loss",
+        "metric",
+        "result",
+        "compare",
+        "why",
+        "how",
+        "what",
+        "which",
+        "best",
+        "worst",
+        "trend",
+        "show",
+        "analyze",
+        "summary",
+        "insight",
+        "data",
     ]
 
     message_lower = request.message.lower()
-    is_related = any(
-        keyword in message_lower for keyword in experiment_keywords)
+    is_related = any(keyword in message_lower for keyword in experiment_keywords)
 
     if not is_related:
         return ChatResponse(
             response="I can only help analyze your ML experiment data. Please ask questions about experiments, trials, costs, or performance metrics.",
             context_used=[],
-            relevant_experiments=[]
+            relevant_experiments=[],
         )
 
     try:
@@ -225,7 +242,7 @@ async def analyze_with_chat(request: ChatRequest):
         # Configure OpenAI client for DeepInfra
         client = openai.OpenAI(
             api_key=settings.deepinfra_api_key,
-            base_url="https://api.deepinfra.com/v1/openai"
+            base_url="https://api.deepinfra.com/v1/openai",
         )
 
         # Build context from experiment data
@@ -250,10 +267,10 @@ Provide a helpful, data-driven answer based on the experiment data above."""
             model=settings.deepinfra_model,
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
             temperature=0.7,
-            max_tokens=500
+            max_tokens=500,
         )
 
         answer = response.choices[0].message.content
@@ -261,13 +278,12 @@ Provide a helpful, data-driven answer based on the experiment data above."""
         return ChatResponse(
             response=answer,
             context_used=list(request.context.keys()),
-            relevant_experiments=_extract_experiment_ids(request.context)
+            relevant_experiments=_extract_experiment_ids(request.context),
         )
 
     except Exception as e:
         logger.error(f"Chat error: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Error processing chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing chat: {str(e)}")
 
 
 # Helper function: Build context summary

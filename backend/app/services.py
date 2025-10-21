@@ -58,10 +58,8 @@ class ExperimentService:
         # Add computed fields
         trials = data_manager.get_trials_by_experiment(experiment_id)
         exp["total_trials"] = len(trials)
-        exp["finished_trials"] = len(
-            [t for t in trials if t["status"] == "finished"])
-        exp["failed_trials"] = len(
-            [t for t in trials if t["status"] == "failed"])
+        exp["finished_trials"] = len([t for t in trials if t["status"] == "finished"])
+        exp["failed_trials"] = len([t for t in trials if t["status"] == "failed"])
 
         import pandas as pd
 
@@ -150,8 +148,7 @@ class TrialService:
         if runs:
             trial["total_runs"] = len(runs)
             trial["total_cost"] = sum(r["costs"] for r in runs)
-            trial["avg_latency"] = sum(r["latency_ms"]
-                                       for r in runs) / len(runs)
+            trial["avg_latency"] = sum(r["latency_ms"] for r in runs) / len(runs)
             trial["total_tokens"] = sum(r["tokens"] for r in runs)
 
         return trial
@@ -185,11 +182,11 @@ class MetricsService:
         """Get various performance metrics"""
         # ✅ MODIFIED: Filter to only use runs from valid trials
         valid_trial_ids = data_manager.trials_df[
-            data_manager.trials_df['is_valid'] == True
-        ]['id'].tolist()
+            data_manager.trials_df["is_valid"] == True
+        ]["id"].tolist()
 
         valid_runs = data_manager.runs_df[
-            data_manager.runs_df['trial_id'].isin(valid_trial_ids)
+            data_manager.runs_df["trial_id"].isin(valid_trial_ids)
         ]
 
         return {
@@ -259,11 +256,11 @@ class AnalyticsService:
 
         # changed: Only analyze runs from valid trials
         valid_trial_ids = data_manager.trials_df[
-            data_manager.trials_df['is_valid'] == True
-        ]['id'].tolist()
+            data_manager.trials_df["is_valid"] == True
+        ]["id"].tolist()
 
         valid_runs = data_manager.runs_df[
-            data_manager.runs_df['trial_id'].isin(valid_trial_ids)
+            data_manager.runs_df["trial_id"].isin(valid_trial_ids)
         ]
 
         # Detect high-cost runs
@@ -283,7 +280,7 @@ class AnalyticsService:
 
         # changed: Detect failed trials pattern (only for valid trials)
         valid_trials = data_manager.trials_df[
-            data_manager.trials_df['is_valid'] == True
+            data_manager.trials_df["is_valid"] == True
         ]
 
         failed_by_exp = (
@@ -310,7 +307,7 @@ class AnalyticsService:
         """Calculate trends and insights"""
         # changed: Calculate accuracy trend (only for valid trials)
         valid_trials = data_manager.trials_df[
-            data_manager.trials_df['is_valid'] == True
+            data_manager.trials_df["is_valid"] == True
         ]
 
         finished_trials = valid_trials[
@@ -319,8 +316,7 @@ class AnalyticsService:
 
         # Rolling mean for accuracy
         if len(finished_trials) > 5:
-            accuracy_trend = finished_trials["accuracy"].rolling(
-                window=5).mean()
+            accuracy_trend = finished_trials["accuracy"].rolling(window=5).mean()
             improving = (
                 accuracy_trend.iloc[-1] > accuracy_trend.iloc[-5]
                 if len(accuracy_trend) >= 5
