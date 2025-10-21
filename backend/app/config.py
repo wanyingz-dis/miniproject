@@ -7,12 +7,13 @@ from pydantic import Field
 from typing import List
 from functools import lru_cache
 import os
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
     # API Configuration
     api_title: str = "LLM Observability Platform"
-    api_version: str = "0.1.0"
+    api_version: str = "1.1.0"
     api_prefix: str = "/api/v1"
 
     # Server
