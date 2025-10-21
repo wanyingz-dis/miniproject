@@ -1,4 +1,4 @@
-# Sat 18 Oct
+# Sat 18 Oct
 
 
 Think first:
@@ -146,9 +146,12 @@ Better visualization
 Check filtering/sorting logic
 Fix Runs issue
 Currency unit
-Add walking cat Easter egg?
 Auto formatting
 Improve index.css: light gray background (Notion/Linear style), faint colored glows (blue, violet, indigo) with grid effect — like a sketch pad look
+
+
+
+
 Current problems:
 Pending/failed trials not showing
 → Backend only returned finished trials
@@ -162,6 +165,10 @@ Fixes:
 Handle NaN before serialization
 Align field names
 Filter deleted experiments
+
+
+
+
 Results:
 Exp-3/4 no longer crash, pending/failed visible
 RUNS column correct
@@ -172,13 +179,19 @@ Dashboard still shows Exp-4 (soft delete not filtered in stats)
 Pie chart shows Exp-4
 Clicking Exp-3 keeps loading
 
+
+
 Root:
 Soft delete not filtered in all endpoints
 Fix: added filter in get_experiments(), get_dashboard_stats(), and get_cost_by_experiment()
-Lesson:
+
+
+
 Handle pandas NaN at multiple levels (before merge and before returning).
 JSON doesn’t support NaN — must convert.
 Keep field names consistent front and back.
+
+
 
 
 # Tue 21 Oct 2025
