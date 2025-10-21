@@ -80,7 +80,8 @@ async def get_experiment(experiment_id: int = Path(..., description="Experiment 
 @router.get("/experiments/{experiment_id}/trials")
 async def get_experiment_trials(
     experiment_id: int = Path(..., description="Experiment ID"),
-    status: Optional[str] = Query(None, regex="^(pending|running|finished|failed)$"),
+    status: Optional[str] = Query(
+        None, regex="^(pending|running|finished|failed)$"),
 ):
     """Get all trials for an experiment"""
     trials = ExperimentService.get_experiment_trials(experiment_id, status)
@@ -138,7 +139,8 @@ async def get_cost_breakdown():
 
 @router.get("/dashboard/daily-costs", response_model=List[DailyCost])
 async def get_daily_costs(
-    days: int = Query(30, ge=1, le=365, description="Number of days to retrieve")
+    days: int = Query(30, ge=1, le=365,
+                      description="Number of days to retrieve")
 ):
     """Get daily cost trends"""
     return MetricsService.get_daily_costs(days)
@@ -189,16 +191,125 @@ async def clear_cache():
 # ============= Chat/Analysis (Bonus) =============
 @router.post("/chat", response_model=ChatResponse)
 async def analyze_with_chat(request: ChatRequest):
-    """Analyze experiments using AI (bonus feature)"""
-    if not settings.enable_chatbot:
-        raise HTTPException(status_code=503, detail="Chatbot feature is not enabled")
+    """Analyze experiments using AI chatbot powered by DeepInfra"""
 
-    # Simplified response for now
-    return ChatResponse(
-        response="This would analyze your experiments using AI. Enable by setting OPENAI_API_KEY.",
-        context_used=["experiment_1", "experiment_2"],
-        relevant_experiments=[1, 2, 3],
-    )
+    # Check if chatbot is enabled
+    if not settings.enable_chatbot:
+        raise HTTPException(
+            status_code=503,
+            detail="Chatbot feature is not enabled. Set DEEPINFRA_API_KEY in .env file."
+        )
+
+    # Filter: Only answer experiment-related questions
+    experiment_keywords = [
+        'experiment', 'trial', 'run', 'accuracy', 'cost', 'performance',
+        'model', 'training', 'loss', 'metric', 'result', 'compare',
+        'why', 'how', 'what', 'which', 'best', 'worst', 'trend',
+        'show', 'analyze', 'summary', 'insight', 'data'
+    ]
+
+    message_lower = request.message.lower()
+    is_related = any(
+        keyword in message_lower for keyword in experiment_keywords)
+
+    if not is_related:
+        return ChatResponse(
+            response="I can only help analyze your ML experiment data. Please ask questions about experiments, trials, costs, or performance metrics.",
+            context_used=[],
+            relevant_experiments=[]
+        )
+
+    try:
+        import openai
+
+        # Configure OpenAI client for DeepInfra
+        client = openai.OpenAI(
+            api_key=settings.deepinfra_api_key,
+            base_url="https://api.deepinfra.com/v1/openai"
+        )
+
+        # Build context from experiment data
+        context_summary = _build_context_summary(request.context)
+
+        system_prompt = """You are an AI assistant helping data scientists analyze ML experiment results.
+You have access to experiment data including costs, accuracy, trials, and runs.
+Provide clear, concise analysis based on the data provided.
+Focus on insights, comparisons, and trends.
+If asked about unrelated topics, politely decline."""
+
+        # User prompt with context
+        user_prompt = f"""Experiment Data:
+{context_summary}
+
+User Question: {request.message}
+
+Provide a helpful, data-driven answer based on the experiment data above."""
+
+        # Call DeepInfra API
+        response = client.chat.completions.create(
+            model=settings.deepinfra_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+
+        answer = response.choices[0].message.content
+
+        return ChatResponse(
+            response=answer,
+            context_used=list(request.context.keys()),
+            relevant_experiments=_extract_experiment_ids(request.context)
+        )
+
+    except Exception as e:
+        logger.error(f"Chat error: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Error processing chat: {str(e)}")
+
+
+# Helper function: Build context summary
+def _build_context_summary(context: dict) -> str:
+    """Build a readable summary from context data"""
+    if not context:
+        return "No experiment data provided."
+
+    summary_parts = []
+
+    for key, value in context.items():
+        if isinstance(value, list) and len(value) > 0:
+            summary_parts.append(f"\n{key.upper()}: {len(value)} items")
+            # Add sample data (first 3 items)
+            if len(value) <= 3:
+                for item in value:
+                    summary_parts.append(f"  - {item}")
+            else:
+                for item in value[:3]:
+                    summary_parts.append(f"  - {item}")
+                summary_parts.append(f"  ... and {len(value) - 3} more")
+        elif isinstance(value, dict):
+            summary_parts.append(f"\n{key.upper()}: {value}")
+        else:
+            summary_parts.append(f"\n{key}: {value}")
+
+    return "\n".join(summary_parts)
+
+
+# Helper function: Extract experiment IDs
+def _extract_experiment_ids(context: dict) -> List[str]:
+    """Extract experiment IDs from context"""
+    experiment_ids = []
+
+    if "experiments" in context and isinstance(context["experiments"], list):
+        for exp in context["experiments"]:
+            if isinstance(exp, dict) and "id" in exp:
+                experiment_ids.append(str(exp["id"]))
+            elif isinstance(exp, dict) and "experiment_id" in exp:
+                experiment_ids.append(str(exp["experiment_id"]))
+
+    return experiment_ids
 
 
 # ============= Utility Endpoints =============
