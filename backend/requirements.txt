@@ -17,3 +17,5 @@ python-dateutil==2.8.2
 pytest==7.4.3
 httpx==0.25.1
 
+# OpenAI SDK (DeepInfra compatible)
+openai==1.3.0

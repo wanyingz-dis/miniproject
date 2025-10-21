@@ -45,9 +45,13 @@ class Settings(BaseSettings):
     pagination_limit: int = 20
     max_results: int = 1000
 
-    # Optional: OpenAI for chatbot
-    openai_api_key: str = ""
-    enable_chatbot: bool = False
+    deepinfra_api_key: Optional[str] = None  # Loaded from .env file
+    deepinfra_model: str = "meta-llama/Meta-Llama-3.1-70B-Instruct"
+
+    @property
+    def enable_chatbot(self) -> bool:
+        """Check if chatbot is enabled based on DeepInfra API key presence"""
+        return bool(self.deepinfra_api_key)
 
     class Config:
         env_file = ".env"
